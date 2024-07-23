@@ -1,9 +1,6 @@
 import gleeunit
 import gleeunit/should
-import non_empty_list
-import outcome.{
-  type Outcome, Defect, Failure, StackEntryDefect, StackEntryFailure,
-}
+import outcome.{type Outcome, Defect, Failure, Problem}
 
 pub fn main() {
   gleeunit.main()
@@ -25,7 +22,7 @@ pub fn print_line_outcome(outcome: Outcome(t)) -> String {
 
 pub fn into_defect_test() {
   let expected =
-    Defect("error", non_empty_list.new(StackEntryDefect("error"), []))
+    Problem(error: Defect("error"), original: Defect("error"), stack: [])
 
   Error("error")
   |> outcome.into_defect
@@ -34,7 +31,7 @@ pub fn into_defect_test() {
 
 pub fn into_failure_test() {
   let expected =
-    Failure("failure", non_empty_list.new(StackEntryFailure("failure"), []))
+    Problem(error: Failure("failure"), original: Failure("failure"), stack: [])
 
   Error("failure")
   |> outcome.into_failure
@@ -43,22 +40,20 @@ pub fn into_failure_test() {
 
 pub fn with_context_test() {
   let expected =
-    Failure(
-      "failure",
-      non_empty_list.new(outcome.StackEntryContext("context"), [
-        StackEntryFailure("failure"),
-      ]),
-    )
+    Problem(error: Failure("failure"), original: Failure("failure"), stack: [
+      "context 2", "context 1",
+    ])
 
   Error("failure")
   |> outcome.into_failure
-  |> outcome.with_context("context")
+  |> outcome.with_context("context 1")
+  |> outcome.with_context("context 2")
   |> should.equal(Error(expected))
 }
 
 pub fn to_defect_test() {
   let expected =
-    Defect("failure", non_empty_list.new(StackEntryFailure("failure"), []))
+    Problem(error: Defect("failure"), original: Failure("failure"), stack: [])
 
   Error("failure")
   |> outcome.into_failure
@@ -68,7 +63,7 @@ pub fn to_defect_test() {
 
 pub fn to_failure_test() {
   let expected =
-    Failure("defect", non_empty_list.new(StackEntryDefect("defect"), []))
+    Problem(error: Failure("defect"), original: Defect("defect"), stack: [])
 
   Error("defect")
   |> outcome.into_defect

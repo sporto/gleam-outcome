@@ -1,46 +1,44 @@
 import gleam/list
 import gleam/result
 import gleam/string
-import non_empty_list.{type NonEmptyList}
 
-/// The error type ie. `Result(t, Problem)`
+// *************************
+// Types
+// *************************
+
 /// An application error is either a Defect or a Failure.
 /// A Defect is an unexpected application error, which shouldn't be shown to the user.
 /// A Failure is an expected error.
+pub type Error {
+  Defect(message: String)
+  Failure(message: String)
+}
+
+/// The error type ie. `Result(t, Problem)`
+/// This contains the error and the context stack.
 pub type Problem {
-  Defect(message: String, stack: Stack)
-  Failure(message: String, stack: Stack)
+  Problem(error: Error, stack: ContextStack, original: Error)
 }
 
-/// Stack entries
-/// Context is just information about the place in the application to build a stack trace.
-pub type StackEntry {
-  StackEntryContext(String)
-  StackEntryDefect(String)
-  StackEntryFailure(String)
-}
-
-/// A stack of problems or context
-pub type Stack =
-  NonEmptyList(StackEntry)
+/// A list of contexts
+pub type ContextStack =
+  List(String)
 
 /// Alias to Result with Problem as error type.
 pub type Outcome(t) =
   Result(t, Problem)
 
 fn new_defect(message: String) -> Problem {
-  Defect(
-    message: message,
-    stack: non_empty_list.single(StackEntryDefect(message)),
-  )
+  Problem(error: Defect(message), original: Defect(message), stack: [])
 }
 
 fn new_failure(message: String) -> Problem {
-  Failure(
-    message: message,
-    stack: non_empty_list.single(StackEntryFailure(message)),
-  )
+  Problem(error: Failure(message), original: Failure(message), stack: [])
 }
+
+// *************************
+// Create new
+// *************************
 
 /// Create a Defect wrapped in an Error
 ///
@@ -150,6 +148,45 @@ pub fn as_failure(result: Result(t, Nil), e: String) -> Outcome(t) {
   result.replace_error(result, new_failure(e))
 }
 
+// *************************
+// Mapping
+// *************************
+
+fn map_current_error_in_problem(
+  problem: Problem,
+  mapper: fn(Error) -> Error,
+) -> Problem {
+  Problem(..problem, error: mapper(problem.error))
+}
+
+fn map_current_error(outcome: Outcome(t), mapper: fn(Error) -> Error) {
+  result.map_error(outcome, map_current_error_in_problem(_, mapper))
+}
+
+fn map_current_message_in_problem(
+  problem: Problem,
+  mapper: fn(String) -> String,
+) -> Problem {
+  map_current_error_in_problem(problem, fn(error) {
+    case error {
+      Defect(message) -> Defect(mapper(message))
+      Failure(message) -> Failure(mapper(message))
+    }
+  })
+}
+
+/// Map the message inside a Defect or Failure
+pub fn map_message(
+  outcome: Outcome(t),
+  mapper: fn(String) -> String,
+) -> Outcome(t) {
+  result.map_error(outcome, map_current_message_in_problem(_, mapper))
+}
+
+// *************************
+// Adding
+// *************************
+
 /// Add context to an Outcome
 /// This will add a Context entry to the stack
 ///
@@ -179,8 +216,7 @@ pub fn with_context(
 /// ```
 ///
 pub fn to_defect(outcome: Outcome(t)) -> Outcome(t) {
-  outcome
-  |> result.map_error(fn(problem) { Defect(problem.message, problem.stack) })
+  map_current_error(outcome, fn(error) { Defect(error.message) })
 }
 
 /// Coherce the error into a Failure.
@@ -195,49 +231,18 @@ pub fn to_defect(outcome: Outcome(t)) -> Outcome(t) {
 /// ```
 ///
 pub fn to_failure(outcome: Outcome(t)) -> Outcome(t) {
-  outcome
-  |> result.map_error(fn(problem) { Failure(problem.message, problem.stack) })
+  map_current_error(outcome, fn(error) { Failure(error.message) })
 }
 
-/// Map the message inside a Defect or Failure
-pub fn map_message(
-  outcome: Outcome(t),
-  mapper: fn(String) -> String,
-) -> Outcome(t) {
-  outcome
-  |> result.map_error(map_message_in_problem(_, mapper))
-}
-
-fn map_message_in_problem(
-  problem: Problem,
-  mapper: fn(String) -> String,
-) -> Problem {
-  case problem {
-    Defect(message, stack) -> Defect(mapper(message), stack)
-    Failure(message, stack) -> Failure(mapper(message), stack)
-  }
-}
-
-/// Add an StackEntry to the top of a Problem stack.
-/// This is a low level function.
-/// You shouldn't need to use this, unless you need to change the stack directly.
-fn push_to_problem_stack(problem: Problem, stack_entry: StackEntry) -> Problem {
-  case problem {
-    Defect(problem, stack) -> Defect(problem, push_to_stack(stack, stack_entry))
-    Failure(problem, stack) ->
-      Failure(problem, push_to_stack(stack, stack_entry))
-  }
-}
-
-fn push_to_stack(stack: Stack, entry: StackEntry) -> NonEmptyList(StackEntry) {
-  non_empty_list.prepend(stack, entry)
+fn push_to_stack(stack: ContextStack, entry: String) -> List(String) {
+  [entry, ..stack]
 }
 
 /// A context to a Problem
 /// This is a low level function.
 /// Prefer to use `with_context` instead which maps the Error.
 fn add_context_to_problem(problem: Problem, value: String) -> Problem {
-  push_to_problem_stack(problem, StackEntryContext(value))
+  Problem(..problem, stack: push_to_stack(problem.stack, value))
 }
 
 /// Use this to show a failure to a user.
@@ -254,24 +259,15 @@ fn add_context_to_problem(problem: Problem, value: String) -> Problem {
 /// }
 /// ```
 pub fn unwrap_failure(problem: Problem, default_message: String) -> String {
-  case problem {
-    Defect(_, _) -> default_message
-    Failure(message, _) -> message
+  case problem.error {
+    Defect(_) -> default_message
+    Failure(message) -> message
   }
 }
 
-fn stack_to_lines(stack: Stack) -> List(String) {
+fn stack_to_lines(stack: ContextStack) -> List(String) {
   stack
-  |> non_empty_list.to_list
   |> list.map(pretty_print_stack_entry)
-}
-
-@internal
-pub fn outcome_to_lines(outcome: Outcome(t)) -> List(String) {
-  case outcome {
-    Ok(_) -> []
-    Error(problem) -> stack_to_lines(problem.stack)
-  }
 }
 
 /// Pretty print a Problem, including the stack.
@@ -296,12 +292,7 @@ pub fn outcome_to_lines(outcome: Outcome(t)) -> List(String) {
 ///  d: Something went wrong
 /// ```
 pub fn pretty_print(problem: Problem) -> String {
-  let stack =
-    problem.stack
-    |> stack_to_lines
-    |> string.join("\n  ")
-
-  prettry_print_problem_value(problem) <> "\n\nstack:\n  " <> stack
+  pretty_print_with_joins(problem, "\n\nstack:\n  ", "\n  ")
 }
 
 /// Print problem in one line
@@ -319,25 +310,52 @@ pub fn pretty_print(problem: Problem) -> String {
 /// Defect: Something went wrong << c: In find user function < d: Something went wrong
 /// ```
 pub fn print_line(problem: Problem) -> String {
+  pretty_print_with_joins(problem, " << ", " < ")
+}
+
+fn pretty_print_with_joins(
+  problem: Problem,
+  join_current: String,
+  join_stack: String,
+) -> String {
+  let current = prettry_print_problem_error(problem)
+
   let stack =
     problem.stack
     |> stack_to_lines
-    |> string.join(" < ")
+    |> string.join(join_stack)
 
-  prettry_print_problem_value(problem) <> " << " <> stack
+  let original = prettry_print_problem_original(problem)
+
+  current <> join_current <> stack <> join_stack <> original
 }
 
-fn prettry_print_problem_value(problem: Problem) -> String {
-  case problem {
-    Defect(value, _) -> "Defect: " <> value
-    Failure(value, _) -> "Failure: " <> value
+fn prettry_print_problem_error(problem: Problem) -> String {
+  prettry_print_error(long_suffix(problem.error), problem.error)
+}
+
+fn long_suffix(error: Error) -> String {
+  case error {
+    Defect(_) -> "Defect: "
+    Failure(_) -> "Failure: "
   }
 }
 
-fn pretty_print_stack_entry(entry: StackEntry) -> String {
-  case entry {
-    StackEntryContext(value) -> "c: " <> value
-    StackEntryDefect(value) -> "d: " <> value
-    StackEntryFailure(value) -> "f: " <> value
+fn prettry_print_problem_original(problem: Problem) -> String {
+  prettry_print_error(short_suffix(problem.error), problem.original)
+}
+
+fn short_suffix(error: Error) -> String {
+  case error {
+    Defect(_) -> "d: "
+    Failure(_) -> "f: "
   }
+}
+
+fn prettry_print_error(suffix: String, error: Error) -> String {
+  suffix <> error.message
+}
+
+fn pretty_print_stack_entry(value: String) -> String {
+  "c: " <> value
 }
