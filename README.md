@@ -66,9 +66,9 @@ using("sam@sample.com")
 Defect: Some SQL error
 
 stack:
-  Context: In signup
-  Context: In create_user
-  Defect: Some SQL error
+  c: In signup
+  c: In create_user
+  d: Some SQL error
 ```
 
 ## Notes

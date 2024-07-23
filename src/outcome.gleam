@@ -283,7 +283,7 @@ pub fn outcome_to_lines(outcome: Outcome(t)) -> List(String) {
 /// Error("Something went wrong")
 /// |> into_defect
 /// |> with_context("In find user function")
-/// |> with_failure("Another failure")
+/// |> with_context("More context")
 /// |> pretty_print
 /// ```
 ///
@@ -291,9 +291,9 @@ pub fn outcome_to_lines(outcome: Outcome(t)) -> List(String) {
 /// Defect: Something went wrong
 ///
 /// stack:
-///  Failure: Another failure
-///  Context: In find user function
-///  Defect: Something went wrong
+///  c: More context
+///  c: In find user function
+///  d: Something went wrong
 /// ```
 pub fn pretty_print(problem: Problem) -> String {
   let stack =
@@ -305,13 +305,26 @@ pub fn pretty_print(problem: Problem) -> String {
 }
 
 /// Print problem in one line
+///
+/// ## Example
+///
+/// ```gleam
+/// Error("Something went wrong")
+/// |> into_defect
+/// |> with_context("In find user function")
+/// |> print_line
+/// ```
+///
+/// ```
+/// Defect: Something went wrong << c: In find user function < d: Something went wrong
+/// ```
 pub fn print_line(problem: Problem) -> String {
   let stack =
     problem.stack
     |> stack_to_lines
     |> string.join(" < ")
 
-  prettry_print_problem_value(problem) <> " < " <> stack
+  prettry_print_problem_value(problem) <> " << " <> stack
 }
 
 fn prettry_print_problem_value(problem: Problem) -> String {

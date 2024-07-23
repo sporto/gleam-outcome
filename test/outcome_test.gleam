@@ -104,5 +104,5 @@ pub fn print_line_test() {
   let output = print_line_outcome(error)
 
   output
-  |> should.equal("Defect: defect < c: context 2 < c: context 1 < d: defect")
+  |> should.equal("Defect: defect << c: context 2 < c: context 1 < d: defect")
 }
