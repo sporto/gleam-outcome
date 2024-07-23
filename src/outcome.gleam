@@ -1,44 +1,70 @@
 import gleam/list
 import gleam/result
+import gleam/string
 
 /// An application error is either a Defect or a Failure.
 /// A Defect is an unexpected application error, which shouldn't be shown to the user.
 /// A Failure is an expected error.
 /// Context is just information about the place in the application to build a stack trace.
-pub type Error {
+pub type Problem {
   Context(String)
   Defect(String)
   Failure(String)
 }
 
-/// The error type. This is a stack that stores the latest problem and a list of previous problems.
-pub type ErrorStack {
-  ErrorStack(problem: Error, problems: List(Error))
+/// A stack of problems and context.
+pub type Stack {
+  Stack(problem: Problem, problems: List(Problem))
 }
 
-/// Alias to Result with ErrorStack as error type.
+/// Alias to Result with Stack as error type.
 pub type Outcome(t) =
-  Result(t, ErrorStack)
+  Result(t, Stack)
 
-/// Create a wrapped Defect
-pub fn defect(defect: String) -> Outcome(t) {
-  Error(ErrorStack(problem: Defect(defect), problems: []))
+/// Wrap a String into a Defect
+pub fn defect(value: String) -> Problem {
+  Defect(value)
 }
 
-/// Create a wrapped Failure
-pub fn failure(failure: String) -> Outcome(t) {
-  Error(ErrorStack(problem: Failure(failure), problems: []))
+/// Wrap a String into a Failure
+pub fn failure(value: String) -> Problem {
+  Failure(value)
 }
 
-/// Get a list of problems for a ErrorStack
-pub fn stack_to_problems(stack: ErrorStack) -> List(Error) {
+/// Create a Defect wrapped in an Problem
+pub fn error_with_defect(defect: String) -> Outcome(t) {
+  Error(Stack(problem: Defect(defect), problems: []))
+}
+
+/// Create Failure wrapped in an Problem
+pub fn error_with_failure(failure: String) -> Outcome(t) {
+  Error(new_stack_with_failure(failure))
+}
+
+/// Create a new Stack with the given Problem
+pub fn new_stack(error: Problem) -> Stack {
+  Stack(error, [])
+}
+
+/// Create a Defect wrapped in an Stack
+pub fn new_stack_with_defect(failure: String) -> Stack {
+  new_stack(Defect(failure))
+}
+
+/// Create a Failure wrapped in an Stack
+pub fn new_stack_with_failure(failure: String) -> Stack {
+  new_stack(Failure(failure))
+}
+
+/// Get a list of problems for a Stack
+pub fn stack_to_problems(stack: Stack) -> List(Problem) {
   [stack.problem, ..stack.problems]
 }
 
 /// Get the failure at the top of the stack.
 /// If the top is not a failure, then return the given default.
 /// Use this for showing an error message to users.
-pub fn unwrap_failure(stack: ErrorStack, default: String) -> String {
+pub fn unwrap_failure(stack: Stack, default: String) -> String {
   stack
   |> stack_to_problems
   |> list.fold_until(from: default, with: fn(message, problem) {
@@ -50,17 +76,17 @@ pub fn unwrap_failure(stack: ErrorStack, default: String) -> String {
   })
 }
 
-/// Convert an Error into a wrapped Defect
+/// Convert an Problem into a wrapped Defect
 pub fn into_defect(result: Result(t, String)) -> Outcome(t) {
-  result.map_error(result, fn(e) { ErrorStack(Defect(e), []) })
+  result.map_error(result, fn(e) { Stack(Defect(e), []) })
 }
 
-/// Convert an Error into a wrapped Failure
+/// Convert an Problem into a wrapped Failure
 pub fn into_failure(result: Result(t, String)) -> Outcome(t) {
-  result.map_error(result, fn(e) { ErrorStack(Failure(e), []) })
+  result.map_error(result, fn(e) { Stack(Failure(e), []) })
 }
 
-/// Convert an Error into a wrapped Defect, by using a mapping function
+/// Convert an Problem into a wrapped Defect, by using a mapping function
 pub fn map_into_defect(
   result: Result(t, e),
   mapper: fn(e) -> String,
@@ -70,14 +96,14 @@ pub fn map_into_defect(
   |> into_defect
 }
 
-/// Replaces an Error with a wrapped Defect
+/// Replaces an Problem with a wrapped Defect
 pub fn as_defect(result: Result(t, Nil), e: String) -> Outcome(t) {
-  result.replace_error(result, ErrorStack(Defect(e), []))
+  result.replace_error(result, Stack(Defect(e), []))
 }
 
-/// Replaces an Error with a wrapped Failure
+/// Replaces an Problem with a wrapped Failure
 pub fn as_failure(result: Result(t, Nil), e: String) -> Outcome(t) {
-  result.replace_error(result, ErrorStack(Failure(e), []))
+  result.replace_error(result, Stack(Failure(e), []))
 }
 
 /// Context is not the same as the error
@@ -89,6 +115,37 @@ pub fn context(
   result.map_error(outcome, fn(stack) { add_to_stack(stack, Context(context)) })
 }
 
-pub fn add_to_stack(stack: ErrorStack, new_problem: Error) -> ErrorStack {
-  ErrorStack(new_problem, [stack.problem, ..stack.problems])
+pub fn add_context_to_stack(stack: Stack, value: String) -> Stack {
+  add_to_stack(stack, Context(value))
+}
+
+pub fn add_defect_to_stack(stack: Stack, value: String) -> Stack {
+  add_to_stack(stack, Defect(value))
+}
+
+pub fn add_failure_to_stack(stack: Stack, value: String) -> Stack {
+  add_to_stack(stack, Failure(value))
+}
+
+/// Add a Problem to the top of a Stack
+pub fn add_to_stack(stack: Stack, new_problem: Problem) -> Stack {
+  Stack(new_problem, [stack.problem, ..stack.problems])
+}
+
+pub fn stack_to_lines(stack: Stack) -> List(String) {
+  stack_to_problems(stack)
+  |> list.map(pretty_print_problem)
+}
+
+pub fn pretty_print(stack: Stack) -> String {
+  stack_to_lines(stack)
+  |> string.join("\n")
+}
+
+fn pretty_print_problem(problem: Problem) -> String {
+  case problem {
+    Context(value) -> "Context: " <> value
+    Defect(value) -> "Defect: " <> value
+    Failure(value) -> "Failure: " <> value
+  }
 }

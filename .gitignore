@@ -1,4 +1,5 @@
 *.beam
 *.ez
+.flox
 /build
 erl_crash.dump
