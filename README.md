@@ -15,4 +15,60 @@ Outcomes gives you:
 gleam add outcome
 ```
 
+```gleam
+import outcome.{type Outcome}
+
+fn using(email) {
+  case signup(email) {
+    Error(stack) -> io.print(outcome.pretty_print(stack))
+    Ok(user) -> {
+      //...
+    }
+  }
+}
+
+fn signup(email: String) -> Outcome(User) {
+  use valid_email <- result.try(
+    validate_email(email)
+    |> outcome.add_context("In signup")
+  )
+
+  create_user(valid_email)
+}
+
+// An expected error should be marked as a failure
+fn validate_email(email: String) -> Outcome(String) {
+  Error("Invalid email")
+    |> outcome.into_failure
+}
+
+// An unexpected error should be marked as a defect
+fn create_user() -> Outcome(User) {
+  Error("Some SQL error")
+  |> outcome.into_defect
+  |> outcome.add_context("In create_user")
+}
+```
+
+```gleam
+using("invalid")
+
+Failure: Invalid email
+
+stack:
+  Context: In signup
+  Failure: Invalid email
+```
+
+```gleam
+using("sam@sample.com")
+
+Defect: Some SQL error
+
+stack:
+  Context: In signup
+  Context: In create_user
+  Defect: Some SQL error
+```
+
 Further documentation can be found at <https://hexdocs.pm/outcome>.

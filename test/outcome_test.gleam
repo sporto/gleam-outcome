@@ -35,6 +35,22 @@ pub fn unwrap_failure_test() {
   |> should.equal("Failure")
 }
 
+pub fn into_defect_test() {
+  Error("error")
+  |> outcome.into_defect
+  |> outcome.add_context("In context")
+  |> outcome.outcome_to_lines
+  |> should.equal(["Context: In context", "Defect: error"])
+}
+
+pub fn into_failure_test() {
+  Error("error")
+  |> outcome.into_failure
+  |> outcome.add_context("In context")
+  |> outcome.outcome_to_lines
+  |> should.equal(["Context: In context", "Failure: error"])
+}
+
 pub fn pretty_print_test() {
   let stack =
     outcome.new_stack_with_defect("defect")
@@ -45,8 +61,11 @@ pub fn pretty_print_test() {
 
   pretty
   |> should.equal(
-    "Context: context
-Failure: failure
-Defect: defect",
+    "Failure: failure
+
+stack:
+  Context: context
+  Failure: failure
+  Defect: defect",
   )
 }

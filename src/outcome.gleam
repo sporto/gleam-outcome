@@ -31,6 +31,14 @@ pub fn failure(value: String) -> Problem {
   Failure(value)
 }
 
+fn problem_is_error(problem: Problem) -> Bool {
+  case problem {
+    Context(_) -> False
+    Defect(_) -> True
+    Failure(_) -> True
+  }
+}
+
 /// Create a Defect wrapped in an Problem
 pub fn error_with_defect(defect: String) -> Outcome(t) {
   Error(Stack(problem: Defect(defect), problems: []))
@@ -59,6 +67,10 @@ pub fn new_stack_with_failure(failure: String) -> Stack {
 /// Get a list of problems for a Stack
 pub fn stack_to_problems(stack: Stack) -> List(Problem) {
   [stack.problem, ..stack.problems]
+}
+
+fn top_problem(problems: List(Problem)) -> Result(Problem, Nil) {
+  list.find(problems, problem_is_error)
 }
 
 /// Get the failure at the top of the stack.
@@ -106,13 +118,12 @@ pub fn as_failure(result: Result(t, Nil), e: String) -> Outcome(t) {
   result.replace_error(result, Stack(Failure(e), []))
 }
 
-/// Context is not the same as the error
 /// Add context to an Outcome
-pub fn context(
+pub fn add_context(
   outcome outcome: Outcome(t),
   context context: String,
 ) -> Outcome(t) {
-  result.map_error(outcome, fn(stack) { add_to_stack(stack, Context(context)) })
+  result.map_error(outcome, fn(stack) { add_context_to_stack(stack, context) })
 }
 
 pub fn add_context_to_stack(stack: Stack, value: String) -> Stack {
@@ -137,9 +148,27 @@ pub fn stack_to_lines(stack: Stack) -> List(String) {
   |> list.map(pretty_print_problem)
 }
 
+@internal
+pub fn outcome_to_lines(outcome: Outcome(t)) -> List(String) {
+  case outcome {
+    Ok(_) -> []
+    Error(stack) -> stack_to_lines(stack)
+  }
+}
+
 pub fn pretty_print(stack: Stack) -> String {
-  stack_to_lines(stack)
-  |> string.join("\n")
+  let problem =
+    stack
+    |> stack_to_problems
+    |> top_problem
+    |> result.map(pretty_print_problem)
+    |> result.unwrap("Error")
+
+  let stack =
+    stack_to_lines(stack)
+    |> string.join("\n  ")
+
+  problem <> "\n\nstack:\n  " <> stack
 }
 
 fn pretty_print_problem(problem: Problem) -> String {
