@@ -54,7 +54,7 @@ pub fn new_failure(message: String) -> Problem {
 
 /// Create a Defect wrapped in an Error
 ///
-/// ##Example
+/// ## Example
 ///
 /// ```gleam
 /// case something {
@@ -69,7 +69,7 @@ pub fn error_with_defect(defect: String) -> Outcome(t) {
 
 /// Create Failure wrapped in an Error
 ///
-/// ##Example
+/// ## Example
 ///
 /// ```gleam
 /// case something {
@@ -86,7 +86,7 @@ pub fn error_with_failure(failure: String) -> Outcome(t) {
 /// This is useful when you have a `Result(t, String)` and
 /// want to convert it into a `Result(t, Problem)`
 ///
-/// ##Example
+/// ## Example
 ///
 /// ```gleam
 /// Error("Something went wrong")
@@ -100,7 +100,7 @@ pub fn into_defect(result: Result(t, String)) -> Outcome(t) {
 /// This is useful when you have a `Result(t, String)` and
 /// want to convert it into a `Result(t, Problem)`
 ///
-/// ##Example
+/// ## Example
 ///
 /// ```gleam
 /// Error("Invalid input")
@@ -136,7 +136,7 @@ pub fn map_into_failure(
 /// This is useful when you have a `Result(t, Nil)` and
 /// want to convert it into a `Result(t, Problem)`
 ///
-/// ##Example
+/// ## Example
 ///
 /// ```gleam
 /// Error(Nil)
@@ -150,7 +150,7 @@ pub fn as_defect(result: Result(t, Nil), e: String) -> Outcome(t) {
 /// This is useful when you have a `Result(t, Nil)` and
 /// want to convert it into a `Result(t, Problem)`
 ///
-/// ##Example
+/// ## Example
 ///
 /// ```gleam
 /// Error(Nil)
@@ -163,7 +163,7 @@ pub fn as_failure(result: Result(t, Nil), e: String) -> Outcome(t) {
 /// Add context to an Outcome
 /// This will add a Context entry to the stack
 ///
-/// ##Example
+/// ## Example
 ///
 /// ```gleam
 /// Error("Something went wrong")
@@ -184,7 +184,7 @@ pub fn with_context(
 /// If the outcome is already a defect, it will stay as the previous defect.
 /// This always adds the defect to the stack.
 ///
-/// ##Example
+/// ## Example
 ///
 /// ```gleam
 /// Error("Invalid input")
@@ -202,7 +202,7 @@ pub fn with_defect(
 /// If the outcome is already a defect, it will stay as the previous defect.
 /// This always adds the failure to the stack.
 ///
-/// ##Example
+/// ## Example
 ///
 /// ```gleam
 /// Error("Invalid input")
@@ -286,7 +286,7 @@ fn add_context_to_problem(problem: Problem, value: String) -> Problem {
 /// otherwise it will show the default message given.
 /// We don't want to show defect messages to users.
 ///
-/// ##Example
+/// ## Example
 ///
 /// ```gleam
 /// case result {
@@ -318,7 +318,7 @@ pub fn outcome_to_lines(outcome: Outcome(t)) -> List(String) {
 /// Pretty print a Problem, including the stack.
 /// The latest problem appears at the top of the stack.
 ///
-/// ##Example
+/// ## Example
 ///
 /// ```gleam
 /// Error("Something went wrong")
