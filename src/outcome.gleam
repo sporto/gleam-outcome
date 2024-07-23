@@ -175,6 +175,13 @@ pub fn add_defect_to_problem_stack(problem: Problem, failure: String) -> Problem
   add_to_problem_stack(problem, StackEntryFailure(failure))
 }
 
+pub fn unwrap_failure(problem: Problem, default_message: String) -> String {
+  case problem {
+    Defect(_, _) -> default_message
+    Failure(message, _) -> message
+  }
+}
+
 fn stack_to_lines(stack: Stack) -> List(String) {
   stack
   |> non_empty_list.to_list

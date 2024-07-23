@@ -1,9 +1,7 @@
 import gleeunit
 import gleeunit/should
 import non_empty_list
-import outcome.{
-  Defect, Failure, StackEntryContext, StackEntryDefect, StackEntryFailure,
-}
+import outcome.{Defect, Failure, StackEntryDefect, StackEntryFailure}
 
 pub fn main() {
   gleeunit.main()
