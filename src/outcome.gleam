@@ -12,7 +12,7 @@ pub type Problem {
   Failure(message: String, stack: Stack)
 }
 
-/// Stax entries
+/// Stack entries
 /// Context is just information about the place in the application to build a stack trace.
 pub type StackEntry {
   StackEntryContext(String)
@@ -28,24 +28,14 @@ pub type Stack =
 pub type Outcome(t) =
   Result(t, Problem)
 
-/// Create a new Defect
-/// This is a lower level function.
-/// Prefer to use `error_with_defect` instead,
-/// which gives you a Defect wrapped in an Error
-@internal
-pub fn new_defect(message: String) -> Problem {
+fn new_defect(message: String) -> Problem {
   Defect(
     message: message,
     stack: non_empty_list.single(StackEntryDefect(message)),
   )
 }
 
-/// Create a new Failure
-/// This is a lower level function.
-/// Prefer to use `error_with_failure` instead,
-/// which gives you a Failure wrapped in an Error
-@internal
-pub fn new_failure(message: String) -> Problem {
+fn new_failure(message: String) -> Problem {
   Failure(
     message: message,
     stack: non_empty_list.single(StackEntryFailure(message)),
@@ -175,94 +165,63 @@ pub fn with_context(
   outcome outcome: Outcome(t),
   context context: String,
 ) -> Outcome(t) {
-  result.map_error(outcome, fn(problem) {
-    add_context_to_problem(problem, context)
-  })
+  result.map_error(outcome, add_context_to_problem(_, context))
 }
 
-/// Add a defect to an Outcome (Result)
-/// If the outcome is already a defect, it will stay as the previous defect.
-/// This always adds the defect to the stack.
+/// Coherce the error into a Defect
 ///
 /// ## Example
 ///
 /// ```gleam
-/// Error("Invalid input")
+/// Error("Invalid Input")
 /// |> into_failure
-/// |> with_defect("Something went wrong")
+/// |> to_defect
 /// ```
-pub fn with_defect(
-  outcome outcome: Outcome(t),
-  defect_message defect_message: String,
-) -> Outcome(t) {
-  result.map_error(outcome, problem_with_defect(_, defect_message))
+///
+pub fn to_defect(outcome: Outcome(t)) -> Outcome(t) {
+  outcome
+  |> result.map_error(fn(problem) { Defect(problem.message, problem.stack) })
 }
 
-/// Add a failure to an Outcome (Result).
-/// If the outcome is already a defect, it will stay as the previous defect.
-/// This always adds the failure to the stack.
+/// Coherce the error into a Failure.
+/// The original entry in the stack remains unchanged.
 ///
 /// ## Example
 ///
 /// ```gleam
-/// Error("Invalid input")
-/// |> into_failure
-/// |> with_failure("Another failure")
+/// Error("Invalid Input")
+/// |> into_defect
+/// |> to_failure
 /// ```
-pub fn with_failure(
-  outcome outcome: Outcome(t),
-  failure_message failure_message: String,
+///
+pub fn to_failure(outcome: Outcome(t)) -> Outcome(t) {
+  outcome
+  |> result.map_error(fn(problem) { Failure(problem.message, problem.stack) })
+}
+
+/// Map the message inside a Defect or Failure
+pub fn map_message(
+  outcome: Outcome(t),
+  mapper: fn(String) -> String,
 ) -> Outcome(t) {
-  result.map_error(outcome, problem_with_failure(_, failure_message))
+  outcome
+  |> result.map_error(map_message_in_problem(_, mapper))
 }
 
-/// Add a defect to a Problem
-/// This is a low level function.
-/// Prefer to use `with_defect` instead which maps the Error.
-@internal
-pub fn problem_with_defect(problem: Problem, defect_message: String) -> Problem {
+fn map_message_in_problem(
+  problem: Problem,
+  mapper: fn(String) -> String,
+) -> Problem {
   case problem {
-    Defect(current_defect_message, stack) ->
-      // A defect stays a defect
-      // We only push the failure into the stack
-      Defect(
-        current_defect_message,
-        push_to_stack(stack, StackEntryDefect(defect_message)),
-      )
-    Failure(_, stack) ->
-      // A failure becomes a defect
-      Defect(
-        defect_message,
-        push_to_stack(stack, StackEntryDefect(defect_message)),
-      )
-  }
-}
-
-/// Add a failure to a Problem
-/// This is a low level function.
-/// Prefer to use `with_failure` instead which maps the Error.
-@internal
-pub fn problem_with_failure(problem: Problem, failure_message: String) -> Problem {
-  case problem {
-    Defect(current_defect_message, stack) ->
-      // A defect stays a defect
-      // We only push the failure into the stack
-      Defect(
-        current_defect_message,
-        push_to_stack(stack, StackEntryFailure(failure_message)),
-      )
-    Failure(_, stack) ->
-      Failure(
-        failure_message,
-        push_to_stack(stack, StackEntryFailure(failure_message)),
-      )
+    Defect(message, stack) -> Defect(mapper(message), stack)
+    Failure(message, stack) -> Failure(mapper(message), stack)
   }
 }
 
 /// Add an StackEntry to the top of a Problem stack.
 /// This is a low level function.
 /// You shouldn't need to use this, unless you need to change the stack directly.
-fn add_to_problem_stack(problem: Problem, stack_entry: StackEntry) -> Problem {
+fn push_to_problem_stack(problem: Problem, stack_entry: StackEntry) -> Problem {
   case problem {
     Defect(problem, stack) -> Defect(problem, push_to_stack(stack, stack_entry))
     Failure(problem, stack) ->
@@ -278,7 +237,7 @@ fn push_to_stack(stack: Stack, entry: StackEntry) -> NonEmptyList(StackEntry) {
 /// This is a low level function.
 /// Prefer to use `with_context` instead which maps the Error.
 fn add_context_to_problem(problem: Problem, value: String) -> Problem {
-  add_to_problem_stack(problem, StackEntryContext(value))
+  push_to_problem_stack(problem, StackEntryContext(value))
 }
 
 /// Use this to show a failure to a user.
@@ -345,12 +304,14 @@ pub fn pretty_print(problem: Problem) -> String {
   prettry_print_problem_value(problem) <> "\n\nstack:\n  " <> stack
 }
 
-@internal
-pub fn pretty_print_outcome(outcome: Outcome(t)) -> String {
-  case outcome {
-    Ok(_) -> "Ok"
-    Error(problem) -> pretty_print(problem)
-  }
+/// Print problem in one line
+pub fn print_line(problem: Problem) -> String {
+  let stack =
+    problem.stack
+    |> stack_to_lines
+    |> string.join(" < ")
+
+  prettry_print_problem_value(problem) <> " < " <> stack
 }
 
 fn prettry_print_problem_value(problem: Problem) -> String {
@@ -362,8 +323,8 @@ fn prettry_print_problem_value(problem: Problem) -> String {
 
 fn pretty_print_stack_entry(entry: StackEntry) -> String {
   case entry {
-    StackEntryContext(value) -> "Context: " <> value
-    StackEntryDefect(value) -> "Defect: " <> value
-    StackEntryFailure(value) -> "Failure: " <> value
+    StackEntryContext(value) -> "c: " <> value
+    StackEntryDefect(value) -> "d: " <> value
+    StackEntryFailure(value) -> "f: " <> value
   }
 }

@@ -1,103 +1,108 @@
 import gleeunit
 import gleeunit/should
 import non_empty_list
-import outcome.{Defect, Failure, StackEntryDefect, StackEntryFailure}
+import outcome.{
+  type Outcome, Defect, Failure, StackEntryDefect, StackEntryFailure,
+}
 
 pub fn main() {
   gleeunit.main()
 }
 
+pub fn pretty_print_outcome(outcome: Outcome(t)) -> String {
+  case outcome {
+    Ok(_) -> "Ok"
+    Error(problem) -> outcome.pretty_print(problem)
+  }
+}
+
+pub fn print_line_outcome(outcome: Outcome(t)) -> String {
+  case outcome {
+    Ok(_) -> "Ok"
+    Error(problem) -> outcome.print_line(problem)
+  }
+}
+
 pub fn into_defect_test() {
+  let expected =
+    Defect("error", non_empty_list.new(StackEntryDefect("error"), []))
+
   Error("error")
   |> outcome.into_defect
-  |> outcome.with_context("In context")
-  |> outcome.outcome_to_lines
-  |> should.equal(["Context: In context", "Defect: error"])
+  |> should.equal(Error(expected))
 }
 
 pub fn into_failure_test() {
-  Error("a failure")
+  let expected =
+    Failure("failure", non_empty_list.new(StackEntryFailure("failure"), []))
+
+  Error("failure")
   |> outcome.into_failure
-  |> outcome.with_context("In context")
-  |> outcome.outcome_to_lines
-  |> should.equal(["Context: In context", "Failure: a failure"])
+  |> should.equal(Error(expected))
 }
 
-pub fn failure_after_failure_test() {
+pub fn with_context_test() {
   let expected =
     Failure(
-      "failure 2",
-      non_empty_list.new(StackEntryFailure("failure 2"), [
-        StackEntryFailure("failure 1"),
-      ]),
-    )
-
-  outcome.new_failure("failure 1")
-  |> outcome.problem_with_failure("failure 2")
-  |> should.equal(expected)
-}
-
-pub fn defect_after_failure_test() {
-  let expected =
-    Defect(
-      "defect",
-      non_empty_list.new(StackEntryDefect("defect"), [
+      "failure",
+      non_empty_list.new(outcome.StackEntryContext("context"), [
         StackEntryFailure("failure"),
       ]),
     )
 
-  outcome.new_failure("failure")
-  |> outcome.problem_with_defect("defect")
-  |> should.equal(expected)
+  Error("failure")
+  |> outcome.into_failure
+  |> outcome.with_context("context")
+  |> should.equal(Error(expected))
 }
 
-pub fn defect_after_defect_test() {
-  // The first defect bubbles up
+pub fn to_defect_test() {
   let expected =
-    Defect(
-      "defect 1",
-      non_empty_list.new(StackEntryDefect("defect 2"), [
-        StackEntryDefect("defect 1"),
-      ]),
-    )
+    Defect("failure", non_empty_list.new(StackEntryFailure("failure"), []))
 
-  outcome.new_defect("defect 1")
-  |> outcome.problem_with_defect("defect 2")
-  |> should.equal(expected)
+  Error("failure")
+  |> outcome.into_failure
+  |> outcome.to_defect
+  |> should.equal(Error(expected))
 }
 
-pub fn failure_after_defect_test() {
-  // The defect bubbles up
+pub fn to_failure_test() {
   let expected =
-    Defect(
-      "defect",
-      non_empty_list.new(StackEntryFailure("failure"), [
-        StackEntryDefect("defect"),
-      ]),
-    )
+    Failure("defect", non_empty_list.new(StackEntryDefect("defect"), []))
 
-  outcome.new_defect("defect")
-  |> outcome.problem_with_failure("failure")
-  |> should.equal(expected)
+  Error("defect")
+  |> outcome.into_defect
+  |> outcome.to_failure
+  |> should.equal(Error(expected))
 }
 
 pub fn pretty_print_test() {
   let error =
-    outcome.error_with_defect("defect 1")
-    |> outcome.with_defect("defect 2")
-    |> outcome.with_failure("failure")
-    |> outcome.with_context("context")
+    outcome.error_with_defect("defect")
+    |> outcome.with_context("context 1")
+    |> outcome.with_context("context 2")
 
-  let pretty = outcome.pretty_print_outcome(error)
+  let pretty = pretty_print_outcome(error)
 
   pretty
   |> should.equal(
-    "Defect: defect 1
+    "Defect: defect
 
 stack:
-  Context: context
-  Failure: failure
-  Defect: defect 2
-  Defect: defect 1",
+  c: context 2
+  c: context 1
+  d: defect",
   )
+}
+
+pub fn print_line_test() {
+  let error =
+    outcome.error_with_defect("defect")
+    |> outcome.with_context("context 1")
+    |> outcome.with_context("context 2")
+
+  let output = print_line_outcome(error)
+
+  output
+  |> should.equal("Defect: defect < c: context 2 < c: context 1 < d: defect")
 }
