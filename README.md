@@ -30,7 +30,7 @@ fn using(email) {
 fn signup(email: String) -> Outcome(User) {
   use valid_email <- result.try(
     validate_email(email)
-    |> outcome.add_context("In signup")
+    |> outcome.with_context("In signup")
   )
 
   create_user(valid_email)
@@ -46,7 +46,7 @@ fn validate_email(email: String) -> Outcome(String) {
 fn create_user() -> Outcome(User) {
   Error("Some SQL error")
   |> outcome.into_defect
-  |> outcome.add_context("In create_user")
+  |> outcome.with_context("In create_user")
 }
 ```
 
@@ -70,5 +70,10 @@ stack:
   Context: In create_user
   Defect: Some SQL error
 ```
+
+## Notes
+
+- When you push a defect on top of a failure, then the `Problem` becomes a defect.
+- When a problem is a `Defect` it stays a `Defect` unless explicitly changed.
 
 Further documentation can be found at <https://hexdocs.pm/outcome>.
