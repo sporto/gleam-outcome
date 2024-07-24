@@ -27,7 +27,7 @@ fn using(email) {
   }
 }
 
-fn signup(email: String) -> Outcome(User) {
+fn signup(email: String) -> Outcome(User, String) {
   use valid_email <- result.try(
     validate_email(email)
     |> outcome.with_context("In signup")
@@ -37,13 +37,13 @@ fn signup(email: String) -> Outcome(User) {
 }
 
 // An expected error should be marked as a failure
-fn validate_email(email: String) -> Outcome(String) {
+fn validate_email(email: String) -> Outcome(String, String) {
   Error("Invalid email")
     |> outcome.into_failure
 }
 
 // An unexpected error should be marked as a defect
-fn create_user() -> Outcome(User) {
+fn create_user() -> Outcome(User, String) {
   Error("Some SQL error")
   |> outcome.into_defect
   |> outcome.with_context("In create_user")
@@ -70,10 +70,5 @@ stack:
   c: In create_user
   d: Some SQL error
 ```
-
-## Notes
-
-- When you push a defect on top of a failure, then the `Problem` becomes a defect.
-- When a problem is a `Defect` it stays a `Defect` unless explicitly changed.
 
 Further documentation can be found at <https://hexdocs.pm/outcome>.
