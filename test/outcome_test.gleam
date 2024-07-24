@@ -1,3 +1,4 @@
+import gleam/function.{identity}
 import gleeunit
 import gleeunit/should
 import outcome.{type Outcome, Defect, Failure, Problem}
@@ -6,17 +7,17 @@ pub fn main() {
   gleeunit.main()
 }
 
-pub fn pretty_print_outcome(outcome: Outcome(t)) -> String {
+pub fn pretty_print_outcome(outcome: Outcome(t, String)) -> String {
   case outcome {
     Ok(_) -> "Ok"
-    Error(problem) -> outcome.pretty_print(problem)
+    Error(problem) -> outcome.pretty_print(problem, identity)
   }
 }
 
-pub fn print_line_outcome(outcome: Outcome(t)) -> String {
+pub fn print_line_outcome(outcome: Outcome(t, String)) -> String {
   case outcome {
     Ok(_) -> "Ok"
-    Error(problem) -> outcome.print_line(problem)
+    Error(problem) -> outcome.print_line(problem, identity)
   }
 }
 
