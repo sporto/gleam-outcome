@@ -1,7 +1,7 @@
 import gleam/function.{identity}
 import gleeunit
 import gleeunit/should
-import outcome.{type Outcome, Defect, ErrorStack, Failure}
+import outcome.{type Outcome, Defect, Failure}
 
 pub fn main() {
   gleeunit.main()
@@ -22,8 +22,7 @@ pub fn print_line_outcome(outcome: Outcome(t, String)) -> String {
 }
 
 pub fn into_defect_test() {
-  let expected =
-    ErrorStack(problem: Defect("error"), original: Defect("error"), stack: [])
+  let expected = Defect(error: "error", stack: [])
 
   Error("error")
   |> outcome.into_defect
@@ -31,12 +30,7 @@ pub fn into_defect_test() {
 }
 
 pub fn into_failure_test() {
-  let expected =
-    ErrorStack(
-      problem: Failure("failure"),
-      original: Failure("failure"),
-      stack: [],
-    )
+  let expected = Failure(error: "failure", stack: [])
 
   Error("failure")
   |> outcome.into_failure
@@ -44,8 +38,7 @@ pub fn into_failure_test() {
 }
 
 pub fn replace_with_defect_test() {
-  let expected =
-    ErrorStack(problem: Defect("error"), original: Defect("error"), stack: [])
+  let expected = Defect(error: "error", stack: [])
 
   Error(Nil)
   |> outcome.replace_with_defect("error")
@@ -53,12 +46,7 @@ pub fn replace_with_defect_test() {
 }
 
 pub fn replace_with_failure_test() {
-  let expected =
-    ErrorStack(
-      problem: Failure("failure"),
-      original: Failure("failure"),
-      stack: [],
-    )
+  let expected = Failure(error: "failure", stack: [])
 
   Error(Nil)
   |> outcome.replace_with_failure("failure")
@@ -66,12 +54,7 @@ pub fn replace_with_failure_test() {
 }
 
 pub fn with_context_test() {
-  let expected =
-    ErrorStack(
-      problem: Failure("failure"),
-      original: Failure("failure"),
-      stack: ["context 2", "context 1"],
-    )
+  let expected = Failure(error: "failure", stack: ["context 2", "context 1"])
 
   Error("failure")
   |> outcome.into_failure
@@ -81,12 +64,7 @@ pub fn with_context_test() {
 }
 
 pub fn to_defect_test() {
-  let expected =
-    ErrorStack(
-      problem: Defect("failure"),
-      original: Failure("failure"),
-      stack: [],
-    )
+  let expected = Defect(error: "failure", stack: [])
 
   Error("failure")
   |> outcome.into_failure
@@ -95,24 +73,12 @@ pub fn to_defect_test() {
 }
 
 pub fn to_failure_test() {
-  let expected =
-    ErrorStack(
-      problem: Failure("defect"),
-      original: Defect("defect"),
-      stack: [],
-    )
+  let expected = Failure(error: "defect", stack: [])
 
   Error("defect")
   |> outcome.into_defect
   |> outcome.to_failure
   |> should.equal(Error(expected))
-}
-
-pub fn extract_problem_test() {
-  Error("error")
-  |> outcome.into_defect
-  |> outcome.extract_problem
-  |> should.equal(Error(Defect("error")))
 }
 
 pub fn extract_error_test() {
@@ -135,9 +101,8 @@ pub fn pretty_print_test() {
     "Defect: defect
 
 stack:
-  c: context 2
-  c: context 1
-  d: defect",
+  context 2
+  context 1",
   )
 }
 
@@ -150,5 +115,5 @@ pub fn print_line_test() {
   let output = print_line_outcome(error)
 
   output
-  |> should.equal("Defect: defect << c: context 2 < c: context 1 < d: defect")
+  |> should.equal("Defect: defect << context 2 < context 1")
 }
