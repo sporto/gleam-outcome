@@ -6,22 +6,30 @@ import gleam/string
 // Types
 // *************************
 
-/// The error type ie. `Result(t, ErrorStack)`
-/// This contains the error and the context stack.
-///
 /// An application error is either a Defect or a Failure.
 /// A Defect is an unexpected application error, which shouldn't be shown to the user.
 /// A Failure is an expected error.
+pub type Severity {
+  Defect
+  Failure
+}
+
+/// The error type ie. `Result(t, Problem)`
+/// This contains the error, the severity and the context stack.
 pub type Problem(err) {
-  Defect(error: err, stack: ContextStack)
-  Failure(error: err, stack: ContextStack)
+  Problem(
+    error: err,
+    severity: Severity,
+    original_severity: Severity,
+    stack: ContextStack,
+  )
 }
 
 /// A list of context entries
 pub type ContextStack =
   List(String)
 
-/// Alias to Result with ErrorStack as error type.
+/// Alias to Result with Problem as error type.
 pub type Outcome(t, err) =
   Result(t, Problem(err))
 
@@ -29,12 +37,21 @@ pub type Outcome(t, err) =
 // Create new
 // *************************
 //
-fn new_defect(value: err) -> Problem(err) {
-  Defect(error: value, stack: [])
+fn new_defect(error: err) -> Problem(err) {
+  new_problem(error, Defect)
 }
 
-fn new_failure(value: err) -> Problem(err) {
-  Failure(error: value, stack: [])
+fn new_failure(error: err) -> Problem(err) {
+  new_problem(error, Failure)
+}
+
+fn new_problem(error: err, severity: Severity) -> Problem(err) {
+  Problem(
+    error: error,
+    severity: severity,
+    original_severity: severity,
+    stack: [],
+  )
 }
 
 /// Create a Defect wrapped in an Error
@@ -69,7 +86,7 @@ pub fn error_with_failure(failure: err) -> Outcome(t, err) {
 
 /// Convert an `Error(String)` into an `Error(Defect)`
 /// This is useful when you have a `Result(t, String)` and
-/// want to convert it into a `Result(t, ErrorStack)`
+/// want to convert it into a `Result(t, Problem)`
 ///
 /// ## Example
 ///
@@ -83,7 +100,7 @@ pub fn into_defect(result: Result(t, err)) -> Outcome(t, err) {
 
 /// Convert an `Error(String)` into an `Error(Failure)`
 /// This is useful when you have a `Result(t, String)` and
-/// want to convert it into a `Result(t, ErrorStack)`
+/// want to convert it into a `Result(t, Problem)`
 ///
 /// ## Example
 ///
@@ -149,13 +166,10 @@ fn map_error_in_problem(
   problem: Problem(err),
   mapper: fn(err) -> err,
 ) -> Problem(err) {
-  case problem {
-    Defect(error, stack) -> Defect(mapper(error), stack)
-    Failure(error, stack) -> Failure(mapper(error), stack)
-  }
+  Problem(..problem, error: mapper(problem.error))
 }
 
-/// Map the value inside a Defect or Failure
+/// Map the error value inside a Problem
 pub fn map_error(
   outcome: Outcome(t, err),
   mapper: fn(err) -> err,
@@ -200,7 +214,7 @@ pub fn to_defect(outcome: Outcome(t, err)) -> Outcome(t, err) {
 }
 
 fn problem_to_defect(problem: Problem(t)) -> Problem(t) {
-  Defect(problem.error, problem.stack)
+  Problem(..problem, severity: Defect)
 }
 
 /// Coherce the error into a Failure.
@@ -219,7 +233,7 @@ pub fn to_failure(outcome: Outcome(t, err)) -> Outcome(t, err) {
 }
 
 fn problem_to_failure(problem: Problem(t)) -> Problem(t) {
-  Failure(problem.error, problem.stack)
+  Problem(..problem, severity: Failure)
 }
 
 fn push_to_stack(stack: ContextStack, entry: String) -> List(String) {
@@ -227,14 +241,11 @@ fn push_to_stack(stack: ContextStack, entry: String) -> List(String) {
 }
 
 fn add_context_to_problem(problem: Problem(err), value: String) -> Problem(err) {
-  case problem {
-    Defect(error, stack) -> Defect(error, push_to_stack(stack, value))
-    Failure(error, stack) -> Failure(error, push_to_stack(stack, value))
-  }
+  Problem(..problem, stack: push_to_stack(problem.stack, value))
 }
 
 /// Use this to show a failure to a user.
-/// If the ErrorStack is a failure, it will show that
+/// If the Problem is a failure, it will show that
 /// otherwise it will show the default message given.
 /// We don't want to show defect messages to users.
 ///
@@ -247,9 +258,9 @@ fn add_context_to_problem(problem: Problem(err), value: String) -> Problem(err) 
 /// }
 /// ```
 pub fn unwrap_failure(problem: Problem(err), default_value: err) -> err {
-  case problem {
-    Defect(_, _) -> default_value
-    Failure(value, _) -> value
+  case problem.severity {
+    Defect -> default_value
+    Failure -> problem.error
   }
 }
 
@@ -267,7 +278,7 @@ fn stack_to_lines(stack: ContextStack) -> List(String) {
   |> list.map(pretty_print_stack_entry)
 }
 
-/// Pretty print a ErrorStack, including the stack.
+/// Pretty print a Problem, including the stack.
 /// The latest problem appears at the top of the stack.
 ///
 /// ## Example
@@ -315,36 +326,32 @@ fn pretty_print_with_joins(
   join_stack: String,
   to_s: fn(err) -> String,
 ) -> String {
-  let current = prettry_print_problem_error(problem, to_s)
+  let current =
+    prettry_print_problem_error(problem.severity, to_s(problem.error))
 
   let stack =
-    problem.stack
+    join_current
+    <> problem.stack
     |> stack_to_lines
     |> string.join(join_stack)
 
-  current <> join_current <> stack
-}
-
-fn prettry_print_problem_error(
-  problem: Problem(err),
-  to_s: fn(err) -> String,
-) -> String {
-  prettry_print_error(long_suffix(problem), problem.error, to_s)
-}
-
-fn long_suffix(problem: Problem(err)) -> String {
-  case problem {
-    Defect(_, _) -> "Defect: "
-    Failure(_, _) -> "Failure: "
+  let stack = case problem.stack {
+    [] -> ""
+    _ -> stack
   }
+
+  current <> stack
 }
 
-fn prettry_print_error(
-  suffix: String,
-  error: err,
-  to_s: fn(err) -> String,
-) -> String {
-  suffix <> to_s(error)
+fn prettry_print_problem_error(severity: Severity, error: String) -> String {
+  long_suffix(severity) <> error
+}
+
+fn long_suffix(severity: Severity) -> String {
+  case severity {
+    Defect -> "Defect: "
+    Failure -> "Failure: "
+  }
 }
 
 fn pretty_print_stack_entry(value: String) -> String {
