@@ -125,7 +125,7 @@ pub fn map_into_failure(
 /// Error(Nil)
 /// |> replace_with_defect("Something went wrong")
 /// ```
-pub fn replace_with_defect(result: Result(t, Nil), e: err) -> Outcome(t, err) {
+pub fn replace_with_defect(result: Result(t, b), e: err) -> Outcome(t, err) {
   result.replace_error(result, new_defect(e))
 }
 
@@ -137,7 +137,7 @@ pub fn replace_with_defect(result: Result(t, Nil), e: err) -> Outcome(t, err) {
 /// Error(Nil)
 /// |> replace_with_failure("Invalid input")
 /// ```
-pub fn replace_with_failure(result: Result(t, Nil), e: err) -> Outcome(t, err) {
+pub fn replace_with_failure(result: Result(t, b), e: err) -> Outcome(t, err) {
   result.replace_error(result, new_failure(e))
 }
 
