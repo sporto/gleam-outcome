@@ -22,13 +22,7 @@ pub fn print_line_outcome(outcome: Outcome(t, String)) -> String {
 }
 
 pub fn into_defect_test() {
-  let expected =
-    Problem(
-      error: "error",
-      severity: Defect,
-      original_severity: Defect,
-      stack: [],
-    )
+  let expected = Problem(error: "error", severity: Defect, stack: [])
 
   Error("error")
   |> outcome.into_defect
@@ -36,13 +30,7 @@ pub fn into_defect_test() {
 }
 
 pub fn into_failure_test() {
-  let expected =
-    Problem(
-      error: "failure",
-      severity: Failure,
-      original_severity: Failure,
-      stack: [],
-    )
+  let expected = Problem(error: "failure", severity: Failure, stack: [])
 
   Error("failure")
   |> outcome.into_failure
@@ -50,13 +38,7 @@ pub fn into_failure_test() {
 }
 
 pub fn replace_with_defect_test() {
-  let expected =
-    Problem(
-      error: "error",
-      severity: Defect,
-      original_severity: Defect,
-      stack: [],
-    )
+  let expected = Problem(error: "error", severity: Defect, stack: [])
 
   Error(Nil)
   |> outcome.replace_with_defect("error")
@@ -64,13 +46,7 @@ pub fn replace_with_defect_test() {
 }
 
 pub fn replace_with_failure_test() {
-  let expected =
-    Problem(
-      error: "failure",
-      severity: Failure,
-      original_severity: Failure,
-      stack: [],
-    )
+  let expected = Problem(error: "failure", severity: Failure, stack: [])
 
   Error(Nil)
   |> outcome.replace_with_failure("failure")
@@ -79,47 +55,14 @@ pub fn replace_with_failure_test() {
 
 pub fn with_context_test() {
   let expected =
-    Problem(
-      error: "failure",
-      severity: Failure,
-      original_severity: Failure,
-      stack: ["context 2", "context 1"],
-    )
+    Problem(error: "failure", severity: Failure, stack: [
+      "context 2", "context 1",
+    ])
 
   Error("failure")
   |> outcome.into_failure
   |> outcome.with_context("context 1")
   |> outcome.with_context("context 2")
-  |> should.equal(Error(expected))
-}
-
-pub fn to_defect_test() {
-  let expected =
-    Problem(
-      error: "failure",
-      severity: Defect,
-      original_severity: Failure,
-      stack: [],
-    )
-
-  Error("failure")
-  |> outcome.into_failure
-  |> outcome.to_defect
-  |> should.equal(Error(expected))
-}
-
-pub fn to_failure_test() {
-  let expected =
-    Problem(
-      error: "defect",
-      severity: Failure,
-      original_severity: Defect,
-      stack: [],
-    )
-
-  Error("defect")
-  |> outcome.into_defect
-  |> outcome.to_failure
   |> should.equal(Error(expected))
 }
 

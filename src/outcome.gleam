@@ -17,12 +17,7 @@ pub type Severity {
 /// The error type ie. `Result(t, Problem)`
 /// This contains the error, the severity and the context stack.
 pub type Problem(err) {
-  Problem(
-    error: err,
-    severity: Severity,
-    original_severity: Severity,
-    stack: ContextStack,
-  )
+  Problem(error: err, severity: Severity, stack: ContextStack)
 }
 
 /// A list of context entries
@@ -46,12 +41,7 @@ fn new_failure(error: err) -> Problem(err) {
 }
 
 fn new_problem(error: err, severity: Severity) -> Problem(err) {
-  Problem(
-    error: error,
-    severity: severity,
-    original_severity: severity,
-    stack: [],
-  )
+  Problem(error: error, severity: severity, stack: [])
 }
 
 /// Create a Defect wrapped in an Error
@@ -197,43 +187,6 @@ pub fn with_context(
   context context: String,
 ) -> Outcome(t, err) {
   result.map_error(outcome, add_context_to_problem(_, context))
-}
-
-/// Coherce the error into a Defect
-///
-/// ## Example
-///
-/// ```gleam
-/// Error("Invalid Input")
-/// |> into_failure
-/// |> to_defect
-/// ```
-///
-pub fn to_defect(outcome: Outcome(t, err)) -> Outcome(t, err) {
-  result.map_error(outcome, problem_to_defect)
-}
-
-fn problem_to_defect(problem: Problem(t)) -> Problem(t) {
-  Problem(..problem, severity: Defect)
-}
-
-/// Coherce the error into a Failure.
-/// The original entry in the stack remains unchanged.
-///
-/// ## Example
-///
-/// ```gleam
-/// Error("Invalid Input")
-/// |> into_defect
-/// |> to_failure
-/// ```
-///
-pub fn to_failure(outcome: Outcome(t, err)) -> Outcome(t, err) {
-  result.map_error(outcome, problem_to_failure)
-}
-
-fn problem_to_failure(problem: Problem(t)) -> Problem(t) {
-  Problem(..problem, severity: Failure)
 }
 
 fn push_to_stack(stack: ContextStack, entry: String) -> List(String) {
