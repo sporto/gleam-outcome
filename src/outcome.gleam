@@ -159,12 +159,91 @@ fn map_error_in_problem(
   Problem(..problem, error: mapper(problem.error))
 }
 
+fn map_defect_in_problem(
+  problem: Problem(err),
+  mapper: fn(err) -> err,
+) -> Problem(err) {
+  case problem.severity {
+    Defect -> Problem(..problem, error: mapper(problem.error))
+    _ -> problem
+  }
+}
+
+fn map_failure_in_problem(
+  problem: Problem(err),
+  mapper: fn(err) -> err,
+) -> Problem(err) {
+  case problem.severity {
+    Failure -> Problem(..problem, error: mapper(problem.error))
+    _ -> problem
+  }
+}
+
 /// Map the error value inside a Problem
 pub fn map_error(
   outcome: Outcome(t, err),
   mapper: fn(err) -> err,
 ) -> Outcome(t, err) {
   result.map_error(outcome, map_error_in_problem(_, mapper))
+}
+
+pub fn map_defect(outcome: Outcome(t, err), mapper: fn(err) -> err) {
+  result.map_error(outcome, map_defect_in_problem(_, mapper))
+}
+
+pub fn map_failure(outcome: Outcome(t, err), mapper: fn(err) -> err) {
+  result.map_error(outcome, map_failure_in_problem(_, mapper))
+}
+
+// *************************
+// Tap
+// *************************
+
+fn tap_error_in_problem(
+  problem: Problem(err),
+  tap: fn(err) -> Nil,
+) -> Problem(err) {
+  tap(problem.error)
+  problem
+}
+
+fn tap_defect_in_problem(
+  problem: Problem(err),
+  tap: fn(err) -> Nil,
+) -> Problem(err) {
+  case problem.severity {
+    Defect -> {
+      tap(problem.error)
+      problem
+    }
+    _ -> problem
+  }
+}
+
+fn tap_failure_in_problem(
+  problem: Problem(err),
+  tap: fn(err) -> Nil,
+) -> Problem(err) {
+  case problem.severity {
+    Failure -> {
+      tap(problem.error)
+      problem
+    }
+    _ -> problem
+  }
+}
+
+/// Use tap functions to log the errors
+pub fn tap_error(outcome: Outcome(t, err), tap: fn(err) -> Nil) {
+  result.map_error(outcome, tap_error_in_problem(_, tap))
+}
+
+pub fn tap_defect(outcome: Outcome(t, err), tap: fn(err) -> Nil) {
+  result.map_error(outcome, tap_defect_in_problem(_, tap))
+}
+
+pub fn tap_failure(outcome: Outcome(t, err), tap: fn(err) -> Nil) {
+  result.map_error(outcome, tap_failure_in_problem(_, tap))
 }
 
 // *************************
