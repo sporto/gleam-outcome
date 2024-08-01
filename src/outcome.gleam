@@ -201,19 +201,19 @@ pub fn map_failure(outcome: Outcome(t, err), mapper: fn(err) -> err) {
 
 fn tap_error_in_problem(
   problem: Problem(err),
-  tap: fn(err) -> Nil,
+  fun: fn(err) -> any,
 ) -> Problem(err) {
-  tap(problem.error)
+  fun(problem.error)
   problem
 }
 
 fn tap_defect_in_problem(
   problem: Problem(err),
-  tap: fn(err) -> Nil,
+  fun: fn(err) -> any,
 ) -> Problem(err) {
   case problem.severity {
     Defect -> {
-      tap(problem.error)
+      fun(problem.error)
       problem
     }
     _ -> problem
@@ -222,11 +222,11 @@ fn tap_defect_in_problem(
 
 fn tap_failure_in_problem(
   problem: Problem(err),
-  tap: fn(err) -> Nil,
+  fun: fn(err) -> any,
 ) -> Problem(err) {
   case problem.severity {
     Failure -> {
-      tap(problem.error)
+      fun(problem.error)
       problem
     }
     _ -> problem
@@ -234,16 +234,35 @@ fn tap_failure_in_problem(
 }
 
 /// Use tap functions to log the errors
-pub fn tap_error(outcome: Outcome(t, err), tap: fn(err) -> Nil) {
-  result.map_error(outcome, tap_error_in_problem(_, tap))
+pub fn tap(
+  outcome: Outcome(t, err),
+  fun: fn(Problem(err)) -> any,
+) -> Outcome(t, err) {
+  result.map_error(outcome, fn(problem) {
+    fun(problem)
+    problem
+  })
 }
 
-pub fn tap_defect(outcome: Outcome(t, err), tap: fn(err) -> Nil) {
-  result.map_error(outcome, tap_defect_in_problem(_, tap))
+pub fn tap_error(
+  outcome: Outcome(t, err),
+  fun: fn(err) -> any,
+) -> Outcome(t, err) {
+  result.map_error(outcome, tap_error_in_problem(_, fun))
 }
 
-pub fn tap_failure(outcome: Outcome(t, err), tap: fn(err) -> Nil) {
-  result.map_error(outcome, tap_failure_in_problem(_, tap))
+pub fn tap_defect(
+  outcome: Outcome(t, err),
+  fun: fn(err) -> any,
+) -> Outcome(t, err) {
+  result.map_error(outcome, tap_defect_in_problem(_, fun))
+}
+
+pub fn tap_failure(
+  outcome: Outcome(t, err),
+  fun: fn(err) -> any,
+) -> Outcome(t, err) {
+  result.map_error(outcome, tap_failure_in_problem(_, fun))
 }
 
 // *************************
