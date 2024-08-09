@@ -30,7 +30,7 @@ fn using(email) {
 fn signup(email: String) -> Outcome(User, String) {
   use valid_email <- result.try(
     validate_email(email)
-    |> outcome.with_context("In signup")
+    |> outcome.context("In signup")
   )
 
   create_user(valid_email)
@@ -46,7 +46,7 @@ fn validate_email(email: String) -> Outcome(String, String) {
 fn create_user() -> Outcome(User, String) {
   Error("Some SQL error")
   |> outcome.into_defect
-  |> outcome.with_context("In create_user")
+  |> outcome.context("In create_user")
 }
 ```
 

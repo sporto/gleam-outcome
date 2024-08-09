@@ -277,10 +277,10 @@ pub fn tap_failure(
 /// ```gleam
 /// Error("Something went wrong")
 /// |> into_defect
-/// |> with_context("In find user function")
+/// |> context("In find user function")
 /// ```
 ///
-pub fn with_context(
+pub fn context(
   outcome outcome: Outcome(t, err),
   context context: String,
 ) -> Outcome(t, err) {
@@ -337,8 +337,8 @@ fn stack_to_lines(stack: ContextStack) -> List(String) {
 /// ```gleam
 /// Error("Something went wrong")
 /// |> into_defect
-/// |> with_context("In find user function")
-/// |> with_context("More context")
+/// |> context("In find user function")
+/// |> context("More context")
 /// |> pretty_print(function.identity)
 /// ```
 ///
@@ -360,7 +360,7 @@ pub fn pretty_print(problem: Problem(err), to_s: fn(err) -> String) -> String {
 /// ```gleam
 /// Error("Something went wrong")
 /// |> into_defect
-/// |> with_context("In find user function")
+/// |> context("In find user function")
 /// |> print_line(function.identity)
 /// ```
 ///

@@ -53,7 +53,7 @@ pub fn replace_with_failure_test() {
   |> should.equal(Error(expected))
 }
 
-pub fn with_context_test() {
+pub fn context_test() {
   let expected =
     Problem(error: "failure", severity: Failure, stack: [
       "context 2", "context 1",
@@ -61,8 +61,8 @@ pub fn with_context_test() {
 
   Error("failure")
   |> outcome.into_failure
-  |> outcome.with_context("context 1")
-  |> outcome.with_context("context 2")
+  |> outcome.context("context 1")
+  |> outcome.context("context 2")
   |> should.equal(Error(expected))
 }
 
@@ -76,8 +76,8 @@ pub fn extract_error_test() {
 pub fn pretty_print_test() {
   let error =
     outcome.error_with_defect("defect")
-    |> outcome.with_context("context 1")
-    |> outcome.with_context("context 2")
+    |> outcome.context("context 1")
+    |> outcome.context("context 2")
 
   let pretty = pretty_print_outcome(error)
 
@@ -103,8 +103,8 @@ pub fn pretty_print_without_context_test() {
 pub fn print_line_test() {
   let error =
     outcome.error_with_defect("defect")
-    |> outcome.with_context("context 1")
-    |> outcome.with_context("context 2")
+    |> outcome.context("context 1")
+    |> outcome.context("context 2")
 
   let output = print_line_outcome(error)
 
