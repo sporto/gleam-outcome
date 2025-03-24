@@ -28,15 +28,31 @@ pub type ContextStack =
 pub type Outcome(t, err) =
   Result(t, Problem(err))
 
-// *************************
-// Create new
-// *************************
-//
-fn new_defect(error: err) -> Problem(err) {
+/// Create a Defect
+/// If you need the `Problem` type only.
+/// Usually you will use `into_defect` instead.
+///
+/// ## Example
+///
+/// ```gleam
+/// new_defect("Something went wrong")
+/// ```
+///
+pub fn new_defect(error: err) -> Problem(err) {
   new_problem(error, Defect)
 }
 
-fn new_failure(error: err) -> Problem(err) {
+/// Create a Failure
+/// If you need the `Problem` type only.
+/// Usually you will use `into_failure` instead.
+///
+/// ## Example
+///
+/// ```gleam
+/// new_failure("Something went wrong")
+/// ```
+///
+pub fn new_failure(error: err) -> Problem(err) {
   new_problem(error, Failure)
 }
 
