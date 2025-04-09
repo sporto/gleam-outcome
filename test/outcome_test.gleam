@@ -21,35 +21,19 @@ pub fn print_line_outcome(outcome: Outcome(t, String)) -> String {
   }
 }
 
-pub fn into_defect_test() {
+pub fn result_to_defect_test() {
   let expected = Problem(error: "error", severity: Defect, stack: [])
 
   Error("error")
-  |> outcome.into_defect
+  |> outcome.result_to_defect
   |> should.equal(Error(expected))
 }
 
-pub fn into_failure_test() {
+pub fn result_to_failure_test() {
   let expected = Problem(error: "failure", severity: Failure, stack: [])
 
   Error("failure")
-  |> outcome.into_failure
-  |> should.equal(Error(expected))
-}
-
-pub fn replace_with_defect_test() {
-  let expected = Problem(error: "error", severity: Defect, stack: [])
-
-  Error(Nil)
-  |> outcome.replace_with_defect("error")
-  |> should.equal(Error(expected))
-}
-
-pub fn replace_with_failure_test() {
-  let expected = Problem(error: "failure", severity: Failure, stack: [])
-
-  Error(Nil)
-  |> outcome.replace_with_failure("failure")
+  |> outcome.result_to_failure
   |> should.equal(Error(expected))
 }
 
@@ -60,24 +44,25 @@ pub fn context_test() {
     ])
 
   Error("failure")
-  |> outcome.into_failure
+  |> outcome.result_to_failure
   |> outcome.context("context 1")
   |> outcome.context("context 2")
   |> should.equal(Error(expected))
 }
 
-pub fn extract_error_test() {
+pub fn to_simple_result_test() {
   Error("error")
-  |> outcome.into_defect
-  |> outcome.extract_error
+  |> outcome.result_to_defect
+  |> outcome.to_simple_result
   |> should.equal(Error("error"))
 }
 
 pub fn pretty_print_test() {
   let error =
-    outcome.error_with_defect("defect")
-    |> outcome.context("context 1")
-    |> outcome.context("context 2")
+    Error("defect")
+    |> outcome.result_to_defect
+    |> outcome.context("context inner")
+    |> outcome.context("context outer")
 
   let pretty = pretty_print_outcome(error)
 
@@ -86,13 +71,15 @@ pub fn pretty_print_test() {
     "Defect: defect
 
 stack:
-  context 2
-  context 1",
+  context inner
+  context outer",
   )
 }
 
 pub fn pretty_print_without_context_test() {
-  let error = outcome.error_with_defect("defect")
+  let error =
+    Error("defect")
+    |> outcome.result_to_defect
 
   let pretty = pretty_print_outcome(error)
 
@@ -102,18 +89,19 @@ pub fn pretty_print_without_context_test() {
 
 pub fn print_line_test() {
   let error =
-    outcome.error_with_defect("defect")
-    |> outcome.context("context 1")
-    |> outcome.context("context 2")
+    Error("defect")
+    |> outcome.result_to_defect
+    |> outcome.context("context inner")
+    |> outcome.context("context outer")
 
   let output = print_line_outcome(error)
 
   output
-  |> should.equal("Defect: defect << context 2 < context 1")
+  |> should.equal("Defect: defect < context inner < context outer")
 }
 
 pub fn print_line_without_context_test() {
-  let error = outcome.error_with_defect("defect")
+  let error = Error("defect") |> outcome.result_to_defect
 
   let output = print_line_outcome(error)
 

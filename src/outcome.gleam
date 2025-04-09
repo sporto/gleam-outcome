@@ -29,8 +29,8 @@ pub type Outcome(t, err) =
   Result(t, Problem(err))
 
 /// Create a Defect
-/// If you need the `Problem` type only.
-/// Usually you will use `into_defect` instead.
+/// Use this if you need the `Problem` type only.
+/// Usually you will use `result_to_defect` instead.
 ///
 /// ## Example
 ///
@@ -43,8 +43,8 @@ pub fn new_defect(error: err) -> Problem(err) {
 }
 
 /// Create a Failure
-/// If you need the `Problem` type only.
-/// Usually you will use `into_failure` instead.
+/// Use this if you need the `Problem` type only.
+/// Usually you will use `result_to_failure` instead.
 ///
 /// ## Example
 ///
@@ -60,36 +60,6 @@ fn new_problem(error: err, severity: Severity) -> Problem(err) {
   Problem(error: error, severity: severity, stack: [])
 }
 
-/// Create a Defect wrapped in an Error
-///
-/// ## Example
-///
-/// ```gleam
-/// case something {
-///   True -> Ok("Yay")
-///   False -> error_with_defect("Something went wrong")
-/// }
-/// ```
-///
-pub fn error_with_defect(defect: err) -> Outcome(t, err) {
-  Error(new_defect(defect))
-}
-
-/// Create Failure wrapped in an Error
-///
-/// ## Example
-///
-/// ```gleam
-/// case something {
-///   True -> Ok("Yay")
-///   False -> error_with_failure("Invalid input")
-/// }
-/// ```
-///
-pub fn error_with_failure(failure: err) -> Outcome(t, err) {
-  Error(new_failure(failure))
-}
-
 /// Convert an `Error(String)` into an `Error(Defect)`
 /// This is useful when you have a `Result(t, String)` and
 /// want to convert it into a `Result(t, Problem)`
@@ -98,9 +68,9 @@ pub fn error_with_failure(failure: err) -> Outcome(t, err) {
 ///
 /// ```gleam
 /// Error("Something went wrong")
-/// |> into_defect
+/// |> result_to_defect
 /// ```
-pub fn into_defect(result: Result(t, err)) -> Outcome(t, err) {
+pub fn result_to_defect(result: Result(t, err)) -> Outcome(t, err) {
   result.map_error(result, new_defect)
 }
 
@@ -112,56 +82,10 @@ pub fn into_defect(result: Result(t, err)) -> Outcome(t, err) {
 ///
 /// ```gleam
 /// Error("Invalid input")
-/// |> into_failure
+/// |> result_to_failure
 /// ```
-pub fn into_failure(result: Result(t, err)) -> Outcome(t, err) {
+pub fn result_to_failure(result: Result(t, err)) -> Outcome(t, err) {
   result.map_error(result, new_failure)
-}
-
-/// Convert an `Error(t)` into a wrapped Defect, by using a mapping function
-/// Similar to into_defect, but takes a function to map the error value to a string
-pub fn map_into_defect(
-  result: Result(t, e),
-  mapper: fn(e) -> err,
-) -> Outcome(t, err) {
-  result
-  |> result.map_error(mapper)
-  |> into_defect
-}
-
-/// Convert an `Error(t)` into a wrapped Failure, by using a mapping function
-/// Similar to into_defect, but takes a function to map the error value to a string
-pub fn map_into_failure(
-  result: Result(t, e),
-  mapper: fn(e) -> err,
-) -> Outcome(t, err) {
-  result
-  |> result.map_error(mapper)
-  |> into_failure
-}
-
-/// Replaces an `Error(t)` with an `Error(Defect)`
-///
-/// ## Example
-///
-/// ```gleam
-/// Error(Nil)
-/// |> replace_with_defect("Something went wrong")
-/// ```
-pub fn replace_with_defect(result: Result(t, b), e: err) -> Outcome(t, err) {
-  result.replace_error(result, new_defect(e))
-}
-
-/// Replaces any Error(t) with an Error(Failure)
-///
-/// ## Example
-///
-/// ```gleam
-/// Error(Nil)
-/// |> replace_with_failure("Invalid input")
-/// ```
-pub fn replace_with_failure(result: Result(t, b), e: err) -> Outcome(t, err) {
-  result.replace_error(result, new_failure(e))
 }
 
 // *************************
@@ -175,40 +99,12 @@ fn map_error_in_problem(
   Problem(..problem, error: mapper(problem.error))
 }
 
-fn map_defect_in_problem(
-  problem: Problem(err),
-  mapper: fn(err) -> err,
-) -> Problem(err) {
-  case problem.severity {
-    Defect -> Problem(..problem, error: mapper(problem.error))
-    _ -> problem
-  }
-}
-
-fn map_failure_in_problem(
-  problem: Problem(err),
-  mapper: fn(err) -> err,
-) -> Problem(err) {
-  case problem.severity {
-    Failure -> Problem(..problem, error: mapper(problem.error))
-    _ -> problem
-  }
-}
-
-/// Map the error value inside a Problem
+/// Map the error value
 pub fn map_error(
   outcome: Outcome(t, err),
   mapper: fn(err) -> err,
 ) -> Outcome(t, err) {
   result.map_error(outcome, map_error_in_problem(_, mapper))
-}
-
-pub fn map_defect(outcome: Outcome(t, err), mapper: fn(err) -> err) {
-  result.map_error(outcome, map_defect_in_problem(_, mapper))
-}
-
-pub fn map_failure(outcome: Outcome(t, err), mapper: fn(err) -> err) {
-  result.map_error(outcome, map_failure_in_problem(_, mapper))
 }
 
 // *************************
@@ -250,6 +146,7 @@ fn tap_failure_in_problem(
 }
 
 /// Use tap functions to log the errors
+/// This yields the `Problem` type.
 pub fn tap(
   outcome: Outcome(t, err),
   fun: fn(Problem(err)) -> any,
@@ -260,6 +157,7 @@ pub fn tap(
   })
 }
 
+/// This yields your error type.
 pub fn tap_error(
   outcome: Outcome(t, err),
   fun: fn(err) -> any,
@@ -267,6 +165,8 @@ pub fn tap_error(
   result.map_error(outcome, tap_error_in_problem(_, fun))
 }
 
+/// Yield your error type
+/// Only called if the severity is Defect
 pub fn tap_defect(
   outcome: Outcome(t, err),
   fun: fn(err) -> any,
@@ -274,6 +174,8 @@ pub fn tap_defect(
   result.map_error(outcome, tap_defect_in_problem(_, fun))
 }
 
+/// Yield your error type
+/// Only called if the severity is Failure
 pub fn tap_failure(
   outcome: Outcome(t, err),
   fun: fn(err) -> any,
@@ -292,7 +194,7 @@ pub fn tap_failure(
 ///
 /// ```gleam
 /// Error("Something went wrong")
-/// |> into_defect
+/// |> result_to_defect
 /// |> context("In find user function")
 /// ```
 ///
@@ -312,19 +214,18 @@ fn add_context_to_problem(problem: Problem(err), value: String) -> Problem(err) 
 }
 
 /// Use this to show a failure to a user.
-/// If the Problem is a failure, it will show that
-/// otherwise it will show the default message given.
-/// We don't want to show defect messages to users.
+/// Extracts the Error value from a `Problem` when the severity is `Failure`.
+/// otherwise it will return the default value given.
 ///
 /// ## Example
 ///
 /// ```gleam
 /// case result {
 ///  Ok(value) -> io.debug("Success")
-///  Error(problem) -> io.error(unwrap_failure(problem, "Something went wrong"))
+///  Error(problem) -> io.error(get_failure_in_problem(problem, "Something went wrong"))
 /// }
 /// ```
-pub fn unwrap_failure(problem: Problem(err), default_value: err) -> err {
+pub fn get_failure_in_problem(problem: Problem(err), default_value: err) -> err {
   case problem.severity {
     Defect -> default_value
     Failure -> problem.error
@@ -332,7 +233,15 @@ pub fn unwrap_failure(problem: Problem(err), default_value: err) -> err {
 }
 
 /// Remove the Problem wrapping, returning just your error.
-pub fn extract_error(outcome: Outcome(t, err)) -> Result(t, err) {
+///
+/// ## Example
+///
+/// ```gleam
+/// let outcome = Error("Fail") |> result_to_defect
+///
+/// to_simple_result(outcome) == Error("Fail")
+/// ```
+pub fn to_simple_result(outcome: Outcome(t, err)) -> Result(t, err) {
   outcome |> result.map_error(problem_to_error)
 }
 
@@ -342,6 +251,7 @@ fn problem_to_error(problem: Problem(err)) -> err {
 
 fn stack_to_lines(stack: ContextStack) -> List(String) {
   stack
+  |> list.reverse
   |> list.map(pretty_print_stack_entry)
 }
 
@@ -352,7 +262,7 @@ fn stack_to_lines(stack: ContextStack) -> List(String) {
 ///
 /// ```gleam
 /// Error("Something went wrong")
-/// |> into_defect
+/// |> result_to_defect
 /// |> context("In find user function")
 /// |> context("More context")
 /// |> pretty_print(function.identity)
@@ -362,8 +272,8 @@ fn stack_to_lines(stack: ContextStack) -> List(String) {
 /// Defect: Something went wrong
 ///
 /// stack:
-///  More context
 ///  In find user function
+///  More context
 /// ```
 pub fn pretty_print(problem: Problem(err), to_s: fn(err) -> String) -> String {
   pretty_print_with_joins(problem, "\n\nstack:\n  ", "\n  ", to_s)
@@ -375,7 +285,7 @@ pub fn pretty_print(problem: Problem(err), to_s: fn(err) -> String) -> String {
 ///
 /// ```gleam
 /// Error("Something went wrong")
-/// |> into_defect
+/// |> result_to_defect
 /// |> context("In find user function")
 /// |> print_line(function.identity)
 /// ```
@@ -384,7 +294,7 @@ pub fn pretty_print(problem: Problem(err), to_s: fn(err) -> String) -> String {
 /// Defect: Something went wrong << In find user function
 /// ```
 pub fn print_line(problem: Problem(err), to_s: fn(err) -> String) -> String {
-  pretty_print_with_joins(problem, " << ", " < ", to_s)
+  pretty_print_with_joins(problem, " < ", " < ", to_s)
 }
 
 fn pretty_print_with_joins(

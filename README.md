@@ -39,13 +39,13 @@ fn signup(email: String) -> Outcome(User, String) {
 // An expected error should be marked as a failure
 fn validate_email(email: String) -> Outcome(String, String) {
   Error("Invalid email")
-    |> outcome.into_failure
+    |> outcome.result_to_failure
 }
 
 // An unexpected error should be marked as a defect
 fn create_user() -> Outcome(User, String) {
   Error("Some SQL error")
-  |> outcome.into_defect
+  |> outcome.result_to_defect
   |> outcome.context("In create_user")
 }
 ```
