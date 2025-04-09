@@ -16,13 +16,19 @@ gleam add outcome
 ```
 
 ```gleam
+import gleam/function
+import gleam/io
 import outcome.{type Outcome}
 
-fn using(email) {
+fn run_program(email) {
   case signup(email) {
-    Error(stack) -> io.print(outcome.pretty_print(stack))
+    Error(problem) -> {
+      problem
+      |> outcome.pretty_print(function.identity)
+      |> io.debug
+    }
     Ok(user) -> {
-      //...
+      todo
     }
   }
 }
@@ -30,7 +36,7 @@ fn using(email) {
 fn signup(email: String) -> Outcome(User, String) {
   use valid_email <- result.try(
     validate_email(email)
-    |> outcome.context("In signup")
+    |> outcome.context("in signup")
   )
 
   create_user(valid_email)
@@ -39,36 +45,36 @@ fn signup(email: String) -> Outcome(User, String) {
 // An expected error should be marked as a failure
 fn validate_email(email: String) -> Outcome(String, String) {
   Error("Invalid email")
-    |> outcome.result_to_failure
+    |> outcome.result_with_failure
+    |> outcome.context("in validate_email")
 }
 
 // An unexpected error should be marked as a defect
 fn create_user() -> Outcome(User, String) {
   Error("Some SQL error")
-  |> outcome.result_to_defect
-  |> outcome.context("In create_user")
+  |> outcome.result_with_defect
+  |> outcome.context("in create_user")
 }
 ```
 
 ```gleam
-using("invalid")
+run_program("invalid email")
 
 Failure: Invalid email
 
 stack:
-  Context: In signup
-  Failure: Invalid email
+  in validate_email
+  in signup
 ```
 
 ```gleam
-using("sam@sample.com")
+run_program("sam@sample.com")
 
 Defect: Some SQL error
 
 stack:
-  c: In signup
-  c: In create_user
-  d: Some SQL error
+  in create_user
+  in signup
 ```
 
 Further documentation can be found at <https://hexdocs.pm/outcome>.

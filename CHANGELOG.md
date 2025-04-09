@@ -1,5 +1,17 @@
 # Changelog
 
+## 3.0.0
+
+Split the package into two modules `outcome` and `problem`.
+Move functions related the `Problem` type to `problem`.
+
+- Moved `new_defect` to `problem` module.
+- Moved `new_failure` to `problem` module.
+- Moved `get_failure` to `problem` module.
+- Rename `result_to_defect` to `result_with_defect`
+- Rename `result_to_failure` to `result_with_failure`
+
+
 ## 2.0.0
 
 This library has many helper functions that do the same thing as the standard libray methods.
