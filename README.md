@@ -45,19 +45,19 @@ fn signup(email: String) -> Outcome(User, String) {
 // An expected error should be marked as a failure
 fn validate_email(email: String) -> Outcome(String, String) {
   Error("Invalid email")
-    |> outcome.result_with_failure
+    |> outcome.as_failure
     |> outcome.context("in validate_email")
 }
 
 // An unexpected error should be marked as a defect
 fn create_user() -> Outcome(User, String) {
   Error("Some SQL error")
-  |> outcome.result_with_defect
+  |> outcome.as_defect
   |> outcome.context("in create_user")
 }
 ```
 
-```gleam
+```text
 run_program("invalid email")
 
 Failure: Invalid email
@@ -67,7 +67,7 @@ stack:
   in signup
 ```
 
-```gleam
+```text
 run_program("sam@sample.com")
 
 Defect: Some SQL error

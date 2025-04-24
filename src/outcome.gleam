@@ -13,9 +13,9 @@ pub type Outcome(t, err) =
 ///
 /// ```gleam
 /// Error("Something went wrong")
-/// |> outcome.result_with_defect
+/// |> outcome.as_defect
 /// ```
-pub fn result_with_defect(result: Result(t, err)) -> Outcome(t, err) {
+pub fn as_defect(result: Result(t, err)) -> Outcome(t, err) {
   result.map_error(result, problem.new_defect)
 }
 
@@ -26,9 +26,9 @@ pub fn result_with_defect(result: Result(t, err)) -> Outcome(t, err) {
 ///
 /// ```gleam
 /// Error("Invalid input")
-/// |> outcome.result_with_failure
+/// |> outcome.as_failure
 /// ```
-pub fn result_with_failure(result: Result(t, err)) -> Outcome(t, err) {
+pub fn as_failure(result: Result(t, err)) -> Outcome(t, err) {
   result.map_error(result, problem.new_failure)
 }
 
@@ -89,7 +89,7 @@ pub fn tap_failure(
 ///
 /// ```gleam
 /// Error("Something went wrong")
-/// |> outcome.result_with_defect
+/// |> outcome.as_defect
 /// |> outcome.context("In find user function")
 /// ```
 ///
@@ -105,7 +105,7 @@ pub fn context(
 /// ## Example
 ///
 /// ```gleam
-/// let result = Error("Fail") |> outcome.result_with_defect
+/// let result = Error("Fail") |> outcome.as_defect
 ///
 /// outcome.to_simple_result(result) == Error("Fail")
 /// ```
@@ -124,10 +124,10 @@ pub fn to_simple_result(outcome: Outcome(t, err)) -> Result(t, err) {
 ///
 /// ```gleam
 /// Error("Something went wrong")
-/// |> outcome.result_with_defect
+/// |> outcome.as_defect
 /// |> outcome.context("In find user function")
 /// |> outcome.context("More context")
-/// |> pretty_print(function.identity)
+/// |> outcome.pretty_print(function.identity)
 /// ```
 ///
 /// ```
@@ -147,9 +147,9 @@ pub fn pretty_print(problem: Problem(err), to_s: fn(err) -> String) -> String {
 ///
 /// ```gleam
 /// Error("Something went wrong")
-/// |> result_with_defect
-/// |> context("In find user function")
-/// |> print_line(function.identity)
+/// |> outcome.as_defect
+/// |> outcome.context("In find user function")
+/// |> outcome.print_line(function.identity)
 /// ```
 ///
 /// ```

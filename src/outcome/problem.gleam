@@ -24,7 +24,7 @@ fn new_problem(error: err, severity: Severity) -> Problem(err) {
 
 /// Create a Defect
 /// Use this if you need the `Problem` type only.
-/// Usually you will use `result_with_defect` instead.
+/// Usually you will use `as_defect` instead.
 ///
 /// ## Example
 ///

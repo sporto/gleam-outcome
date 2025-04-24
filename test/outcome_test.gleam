@@ -22,19 +22,19 @@ pub fn print_line_outcome(outcome: Outcome(t, String)) -> String {
   }
 }
 
-pub fn result_with_defect_test() {
+pub fn as_defect_test() {
   let expected = Problem(error: "error", severity: Defect, stack: [])
 
   Error("error")
-  |> outcome.result_with_defect
+  |> outcome.as_defect
   |> should.equal(Error(expected))
 }
 
-pub fn result_with_failure_test() {
+pub fn as_failure_test() {
   let expected = Problem(error: "failure", severity: Failure, stack: [])
 
   Error("failure")
-  |> outcome.result_with_failure
+  |> outcome.as_failure
   |> should.equal(Error(expected))
 }
 
@@ -45,7 +45,7 @@ pub fn context_test() {
     ])
 
   Error("failure")
-  |> outcome.result_with_failure
+  |> outcome.as_failure
   |> outcome.context("context 1")
   |> outcome.context("context 2")
   |> should.equal(Error(expected))
@@ -53,7 +53,7 @@ pub fn context_test() {
 
 pub fn to_simple_result_test() {
   Error("error")
-  |> outcome.result_with_defect
+  |> outcome.as_defect
   |> outcome.to_simple_result
   |> should.equal(Error("error"))
 }
@@ -61,7 +61,7 @@ pub fn to_simple_result_test() {
 pub fn pretty_print_test() {
   let error =
     Error("defect")
-    |> outcome.result_with_defect
+    |> outcome.as_defect
     |> outcome.context("context inner")
     |> outcome.context("context outer")
 
@@ -80,7 +80,7 @@ stack:
 pub fn pretty_print_without_context_test() {
   let error =
     Error("defect")
-    |> outcome.result_with_defect
+    |> outcome.as_defect
 
   let pretty = pretty_print_outcome(error)
 
@@ -91,7 +91,7 @@ pub fn pretty_print_without_context_test() {
 pub fn print_line_test() {
   let error =
     Error("defect")
-    |> outcome.result_with_defect
+    |> outcome.as_defect
     |> outcome.context("context inner")
     |> outcome.context("context outer")
 
@@ -102,7 +102,7 @@ pub fn print_line_test() {
 }
 
 pub fn print_line_without_context_test() {
-  let error = Error("defect") |> outcome.result_with_defect
+  let error = Error("defect") |> outcome.as_defect
 
   let output = print_line_outcome(error)
 

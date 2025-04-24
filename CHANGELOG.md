@@ -8,8 +8,8 @@ Move functions related the `Problem` type to `problem`.
 - Moved `new_defect` to `problem` module.
 - Moved `new_failure` to `problem` module.
 - Moved `get_failure` to `problem` module.
-- Rename `result_to_defect` to `result_with_defect`
-- Rename `result_to_failure` to `result_with_failure`
+- Rename `result_to_defect` to `as_defect`
+- Rename `result_to_failure` to `as_failure`
 
 
 ## 2.0.0
