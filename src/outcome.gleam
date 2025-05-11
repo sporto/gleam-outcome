@@ -1,95 +1,32 @@
+import gleam/list
 import gleam/result
 import gleam/string
-import outcome/problem.{type Problem, type Severity, Defect, Failure, Problem}
 
-/// Alias to Result with Problem as error type.
+/// A list of context entries
+pub type ContextStack =
+  List(String)
+
+/// The error type in a result ie. `Result(t, Problem(e))`
+pub type Problem(err) {
+  Problem(error: err, stack: ContextStack)
+}
+
+/// An alias for the `Result` type. Where the error type is `Problem`.
 pub type Outcome(t, err) =
   Result(t, Problem(err))
 
-/// Convert `Result(a, e)` to `Result(a, Problem(e))`
-/// with severity as `Defect`
+fn push_to_stack(stack: ContextStack, entry: String) -> List(String) {
+  [entry, ..stack]
+}
+
+/// Add context to a Problem.
+/// This will add a context entry to the stack.
 ///
 /// ## Example
 ///
 /// ```gleam
 /// Error("Something went wrong")
-/// |> outcome.as_defect
-/// ```
-pub fn as_defect(result: Result(t, err)) -> Outcome(t, err) {
-  result.map_error(result, problem.new_defect)
-}
-
-/// Convert `Result(a, e)` to `Result(a, Problem(e))`
-/// with severity as `Failure`.
-///
-/// ## Example
-///
-/// ```gleam
-/// Error("Invalid input")
-/// |> outcome.as_failure
-/// ```
-pub fn as_failure(result: Result(t, err)) -> Outcome(t, err) {
-  result.map_error(result, problem.new_failure)
-}
-
-/// Map the error value
-pub fn map_error(
-  outcome: Outcome(t, err),
-  mapper: fn(err) -> err,
-) -> Outcome(t, err) {
-  result.map_error(outcome, problem.map_error(_, mapper))
-}
-
-// *************************
-// Tap
-// *************************
-
-/// Use tap functions to log the errors.
-/// This yields the `Problem` type.
-pub fn tap(
-  outcome: Outcome(t, err),
-  fun: fn(Problem(err)) -> any,
-) -> Outcome(t, err) {
-  result.map_error(outcome, fn(problem) {
-    fun(problem)
-    problem
-  })
-}
-
-/// This yields your error type.
-pub fn tap_error(
-  outcome: Outcome(t, err),
-  fun: fn(err) -> any,
-) -> Outcome(t, err) {
-  result.map_error(outcome, problem.tap_error(_, fun))
-}
-
-/// Yield your error type.
-/// Only called if the severity is Defect.
-pub fn tap_defect(
-  outcome: Outcome(t, err),
-  fun: fn(err) -> any,
-) -> Outcome(t, err) {
-  result.map_error(outcome, problem.tap_defect(_, fun))
-}
-
-/// Yield your error type.
-/// Only called if the severity is Failure.
-pub fn tap_failure(
-  outcome: Outcome(t, err),
-  fun: fn(err) -> any,
-) -> Outcome(t, err) {
-  result.map_error(outcome, problem.tap_failure(_, fun))
-}
-
-/// Add context to an Outcome.
-/// This will add a Context entry to the stack.
-///
-/// ## Example
-///
-/// ```gleam
-/// Error("Something went wrong")
-/// |> outcome.as_defect
+/// |> outcome.outcome
 /// |> outcome.context("In find user function")
 /// ```
 ///
@@ -97,7 +34,52 @@ pub fn context(
   outcome outcome: Outcome(t, err),
   context context: String,
 ) -> Outcome(t, err) {
-  result.map_error(outcome, problem.add_context(_, context))
+  result.map_error(outcome, problem_context(_, context))
+}
+
+fn problem_context(problem: Problem(err), value: String) -> Problem(err) {
+  Problem(..problem, stack: push_to_stack(problem.stack, value))
+}
+
+/// Convert `Result(a, e)` to `Result(a, Problem(e))`
+///
+/// ## Example
+///
+/// ```gleam
+/// Error("Something went wrong")
+/// |> outcome.outcome
+/// ```
+pub fn outcome(result: Result(t, err)) -> Outcome(t, err) {
+  result.map_error(result, new_problem)
+}
+
+/// Create a `Problem`
+/// Use this if you need the `Problem` type only.
+/// Usually you will use `outcome` instead.
+///
+/// ## Example
+///
+/// ```gleam
+/// outcome.new_problem("Something went wrong")
+/// ```
+///
+pub fn new_problem(error: err) -> Problem(err) {
+  Problem(error:, stack: [])
+}
+
+/// Map the error value
+pub fn map_error(
+  outcome: Outcome(t, err),
+  mapper: fn(err) -> err,
+) -> Outcome(t, err) {
+  result.map_error(outcome, problem_map_error(_, mapper))
+}
+
+fn problem_map_error(
+  problem: Problem(err),
+  mapper: fn(err) -> err,
+) -> Problem(err) {
+  Problem(..problem, error: mapper(problem.error))
 }
 
 /// Remove the `Problem` wrapping in the error value
@@ -105,12 +87,12 @@ pub fn context(
 /// ## Example
 ///
 /// ```gleam
-/// let result = Error("Fail") |> outcome.as_defect
+/// let outcome = Error("Fail") |> outcome.outcome
 ///
-/// outcome.to_simple_result(result) == Error("Fail")
+/// outcome.remove_problem(outcome) == Error("Fail")
 /// ```
-pub fn to_simple_result(outcome: Outcome(t, err)) -> Result(t, err) {
-  outcome |> result.map_error(problem.extract_error)
+pub fn remove_problem(outcome: Outcome(t, err)) -> Result(t, err) {
+  outcome |> result.map_error(fn(problem) { problem.error })
 }
 
 // *************************
@@ -123,15 +105,21 @@ pub fn to_simple_result(outcome: Outcome(t, err)) -> Result(t, err) {
 /// ## Example
 ///
 /// ```gleam
-/// Error("Something went wrong")
-/// |> outcome.as_defect
+/// let result = Error("Something went wrong")
+/// |> outcome.outcome
 /// |> outcome.context("In find user function")
 /// |> outcome.context("More context")
-/// |> outcome.pretty_print(function.identity)
+///
+/// case result {
+///   Error(problem) ->
+///     outcome.pretty_print(function.identity)
+///
+///   Ok(_) -> todo
+/// }
 /// ```
 ///
 /// ```
-/// Defect: Something went wrong
+/// Something went wrong
 ///
 /// stack:
 ///  In find user function
@@ -146,14 +134,20 @@ pub fn pretty_print(problem: Problem(err), to_s: fn(err) -> String) -> String {
 /// ## Example
 ///
 /// ```gleam
-/// Error("Something went wrong")
-/// |> outcome.as_defect
+/// let result = Error("Something went wrong")
+/// |> outcome.outcome
 /// |> outcome.context("In find user function")
-/// |> outcome.print_line(function.identity)
+///
+/// case result {
+///   Error(problem) ->
+///     outcome.print_line(function.identity)
+///
+///   Ok(_) -> todo
+/// }
 /// ```
 ///
 /// ```
-/// Defect: Something went wrong < In find user function
+/// Something went wrong < In find user function
 /// ```
 pub fn print_line(problem: Problem(err), to_s: fn(err) -> String) -> String {
   pretty_print_with_joins(problem, " < ", " < ", to_s)
@@ -165,13 +159,12 @@ fn pretty_print_with_joins(
   join_stack: String,
   to_s: fn(err) -> String,
 ) -> String {
-  let current =
-    prettry_print_problem_error(problem.severity, to_s(problem.error))
+  let current = to_s(problem.error)
 
   let stack =
     join_current
     <> problem.stack
-    |> problem.stack_to_lines
+    |> stack_to_lines
     |> string.join(join_stack)
 
   let stack = case problem.stack {
@@ -182,13 +175,7 @@ fn pretty_print_with_joins(
   current <> stack
 }
 
-fn prettry_print_problem_error(severity: Severity, error: String) -> String {
-  long_suffix(severity) <> error
-}
-
-fn long_suffix(severity: Severity) -> String {
-  case severity {
-    Defect -> "Defect: "
-    Failure -> "Failure: "
-  }
+fn stack_to_lines(stack: ContextStack) -> List(String) {
+  stack
+  |> list.reverse
 }

@@ -1,8 +1,7 @@
 import gleam/function.{identity}
 import gleeunit
 import gleeunit/should
-import outcome.{type Outcome}
-import outcome/problem.{Defect, Failure, Problem}
+import outcome.{type Outcome, Problem}
 
 pub fn main() {
   gleeunit.main()
@@ -22,46 +21,35 @@ pub fn print_line_outcome(outcome: Outcome(t, String)) -> String {
   }
 }
 
-pub fn as_defect_test() {
-  let expected = Problem(error: "error", severity: Defect, stack: [])
+pub fn outcome_test() {
+  let expected = Problem(error: "error", stack: [])
 
   Error("error")
-  |> outcome.as_defect
-  |> should.equal(Error(expected))
-}
-
-pub fn as_failure_test() {
-  let expected = Problem(error: "failure", severity: Failure, stack: [])
-
-  Error("failure")
-  |> outcome.as_failure
+  |> outcome.outcome
   |> should.equal(Error(expected))
 }
 
 pub fn context_test() {
-  let expected =
-    Problem(error: "failure", severity: Failure, stack: [
-      "context 2", "context 1",
-    ])
+  let expected = Problem(error: "failure", stack: ["context 2", "context 1"])
 
   Error("failure")
-  |> outcome.as_failure
+  |> outcome.outcome
   |> outcome.context("context 1")
   |> outcome.context("context 2")
   |> should.equal(Error(expected))
 }
 
-pub fn to_simple_result_test() {
+pub fn remove_problem_test() {
   Error("error")
-  |> outcome.as_defect
-  |> outcome.to_simple_result
+  |> outcome.outcome
+  |> outcome.remove_problem
   |> should.equal(Error("error"))
 }
 
 pub fn pretty_print_test() {
   let error =
     Error("defect")
-    |> outcome.as_defect
+    |> outcome.outcome
     |> outcome.context("context inner")
     |> outcome.context("context outer")
 
@@ -69,7 +57,7 @@ pub fn pretty_print_test() {
 
   pretty
   |> should.equal(
-    "Defect: defect
+    "defect
 
 stack:
   context inner
@@ -80,32 +68,32 @@ stack:
 pub fn pretty_print_without_context_test() {
   let error =
     Error("defect")
-    |> outcome.as_defect
+    |> outcome.outcome
 
   let pretty = pretty_print_outcome(error)
 
   pretty
-  |> should.equal("Defect: defect")
+  |> should.equal("defect")
 }
 
 pub fn print_line_test() {
   let error =
     Error("defect")
-    |> outcome.as_defect
+    |> outcome.outcome
     |> outcome.context("context inner")
     |> outcome.context("context outer")
 
   let output = print_line_outcome(error)
 
   output
-  |> should.equal("Defect: defect < context inner < context outer")
+  |> should.equal("defect < context inner < context outer")
 }
 
 pub fn print_line_without_context_test() {
-  let error = Error("defect") |> outcome.as_defect
+  let error = Error("defect") |> outcome.outcome
 
   let output = print_line_outcome(error)
 
   output
-  |> should.equal("Defect: defect")
+  |> should.equal("defect")
 }
