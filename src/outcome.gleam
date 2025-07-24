@@ -37,6 +37,26 @@ pub fn context(
   result.map_error(outcome, problem_context(_, context))
 }
 
+/// Convenient function for adding context
+/// at the top of a function that returns an Outcome.
+///
+/// ## Example
+///
+/// ```gleam
+/// fn do_something(user_id: String) -> Outcome(AnswerType, ErrorType) {
+///   use <- with_context("user_id " <> user_id)
+///
+///   ...
+/// }
+///
+/// This is equivalent to adding `|> outcome.context(...)` to each
+/// of the results in the body of the function
+///
+pub fn with_context(error_context: String, next) {
+  next()
+  |> context(error_context)
+}
+
 fn problem_context(problem: Problem(err), value: String) -> Problem(err) {
   Problem(..problem, stack: push_to_stack(problem.stack, value))
 }

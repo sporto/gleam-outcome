@@ -42,6 +42,19 @@ pub fn context_test() {
   assert actual == Error(expected)
 }
 
+pub fn with_context_test() {
+  let process = fn(user_id: String) {
+    use <- outcome.with_context("in " <> user_id)
+    Error("failure") |> outcome.outcome |> outcome.context("failed")
+  }
+
+  let actual = process("123")
+
+  let expected = Problem(error: "failure", stack: ["in 123", "failed"])
+
+  assert actual == Error(expected)
+}
+
 pub fn remove_problem_test() {
   let actual =
     Error("error")
